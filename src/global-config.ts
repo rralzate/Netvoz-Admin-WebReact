@@ -12,7 +12,7 @@ export type GlobalConfig = {
 export const GLOBAL_CONFIG: GlobalConfig = {
 	appName: "Netvoz Admin",
 	appVersion: packageJson.version,
-	defaultRoute: import.meta.env.VITE_APP_DEFAULT_ROUTE || (window as any).APP_CONFIG?.defaultRoute || "/subscriptions",
+	defaultRoute: import.meta.env.VITE_APP_DEFAULT_ROUTE || (window as any).APP_CONFIG?.defaultRoute || "/workbench",
 	publicPath: import.meta.env.VITE_APP_PUBLIC_PATH || (window as any).APP_CONFIG?.publicPath || "/",
 	apiBaseUrl:
 		import.meta.env.VITE_APP_API_BASE_URL ||

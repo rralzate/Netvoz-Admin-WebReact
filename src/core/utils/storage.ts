@@ -1,26 +1,28 @@
-import { StorageEnum } from "@/core/types/enum";
+import type { StorageEnum } from "@/core/types/enum";
 
-export function getStringItem(key: StorageEnum): string | null {
+export const getItem = <T>(key: StorageEnum): T | null => {
+	let value = null;
 	try {
-		return localStorage.getItem(key);
+		const result = window.localStorage.getItem(key);
+		if (result) {
+			value = JSON.parse(result);
+		}
 	} catch (error) {
-		console.error(`Error getting item ${key} from localStorage:`, error);
-		return null;
+		console.error(error);
 	}
-}
+	return value;
+};
 
-export function setStringItem(key: StorageEnum, value: string): void {
-	try {
-		localStorage.setItem(key, value);
-	} catch (error) {
-		console.error(`Error setting item ${key} to localStorage:`, error);
-	}
-}
+export const getStringItem = (key: StorageEnum): string | null => {
+	return localStorage.getItem(key);
+};
 
-export function removeItem(key: StorageEnum): void {
-	try {
-		localStorage.removeItem(key);
-	} catch (error) {
-		console.error(`Error removing item ${key} from localStorage:`, error);
-	}
-}
+export const setItem = <T>(key: StorageEnum, value: T): void => {
+	localStorage.setItem(key, JSON.stringify(value));
+};
+export const removeItem = (key: StorageEnum): void => {
+	localStorage.removeItem(key);
+};
+export const clearItems = () => {
+	localStorage.clear();
+};

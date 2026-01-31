@@ -1,6 +1,12 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 import { GLOBAL_CONFIG } from "@/global-config";
 
+interface RequestOptions<D = any> {
+	url: string;
+	data?: D;
+	config?: AxiosRequestConfig;
+}
+
 class ApiClient {
 	private client: AxiosInstance;
 
@@ -32,7 +38,7 @@ class ApiClient {
 		);
 
 		this.client.interceptors.response.use(
-			(response) => response,
+			(response) => response.data,
 			(error) => {
 				if (error.response?.status === 401) {
 					// Handle unauthorized
@@ -44,21 +50,22 @@ class ApiClient {
 		);
 	}
 
-	public get<T = any>(url: string, config?: AxiosRequestConfig) {
-		return this.client.get<T>(url, config);
+	public async get<T = any>(options: RequestOptions): Promise<T> {
+		return this.client.get<T, T>(options.url, options.config);
 	}
 
-	public post<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
-		return this.client.post<T>(url, data, config);
+	public async post<T = any>(options: RequestOptions): Promise<T> {
+		return this.client.post<T, T>(options.url, options.data, options.config);
 	}
 
-	public put<T = any>(url: string, data?: any, config?: AxiosRequestConfig) {
-		return this.client.put<T>(url, data, config);
+	public async put<T = any>(options: RequestOptions): Promise<T> {
+		return this.client.put<T, T>(options.url, options.data, options.config);
 	}
 
-	public delete<T = any>(url: string, config?: AxiosRequestConfig) {
-		return this.client.delete<T>(url, config);
+	public async delete<T = any>(options: RequestOptions): Promise<T> {
+		return this.client.delete<T, T>(options.url, options.config);
 	}
 }
 
 export const apiClient = new ApiClient();
+export default apiClient;
