@@ -1,11 +1,17 @@
-import type { SubscriptionEntity, SubscriptionListResponse, SubscriptionStatus } from "../../domain/entities/SubscriptionEntity";
+import type {
+	SubscriptionEntity,
+	SubscriptionListResponse,
+	SubscriptionEstado,
+	SubscriptionCreateRequest,
+	SubscriptionUpdateRequest,
+} from "../../domain/entities/SubscriptionEntity";
 import type { SubscriptionRepository } from "../../domain/repositories/SubscriptionRepository";
 import type { SubscriptionDatasource } from "../datasource/SubscriptionDatasource";
 
 export class SubscriptionRepositoryImpl implements SubscriptionRepository {
 	constructor(private readonly datasource: SubscriptionDatasource) {}
 
-	async getAll(filters?: { status?: SubscriptionStatus; page?: number; pageSize?: number }): Promise<SubscriptionListResponse> {
+	async getAll(filters?: { estado?: SubscriptionEstado; page?: number; pageSize?: number }): Promise<SubscriptionListResponse> {
 		return this.datasource.getAll(filters);
 	}
 
@@ -13,11 +19,11 @@ export class SubscriptionRepositoryImpl implements SubscriptionRepository {
 		return this.datasource.getById(id);
 	}
 
-	async create(data: Omit<SubscriptionEntity, "id">): Promise<SubscriptionEntity> {
+	async create(data: SubscriptionCreateRequest): Promise<SubscriptionEntity> {
 		return this.datasource.create(data);
 	}
 
-	async update(id: string, data: Partial<SubscriptionEntity>): Promise<SubscriptionEntity> {
+	async update(id: string, data: SubscriptionUpdateRequest): Promise<SubscriptionEntity> {
 		return this.datasource.update(id, data);
 	}
 

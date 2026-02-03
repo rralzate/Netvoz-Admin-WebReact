@@ -22,11 +22,48 @@ class ApiClient {
 		this.setupInterceptors();
 	}
 
+	private getAccessToken(): string | null {
+		try {
+			// Token is stored by Zustand persist middleware under "userStore" key
+			const stored = localStorage.getItem("userStore");
+			if (stored) {
+				const parsed = JSON.parse(stored);
+				// Zustand persist stores state in a "state" property
+				return parsed.state?.userToken?.accessToken || parsed.userToken?.accessToken || null;
+			}
+			return null;
+		} catch (error) {
+			console.warn("Error reading auth token from storage:", error);
+			return null;
+		}
+	}
+
+	private clearAuthStorage() {
+		try {
+			const stored = localStorage.getItem("userStore");
+			if (stored) {
+				const parsed = JSON.parse(stored);
+				// Clear only the token, preserve other state
+				if (parsed.state) {
+					parsed.state.userToken = {};
+					parsed.state.userInfo = {};
+				} else {
+					parsed.userToken = {};
+					parsed.userInfo = {};
+				}
+				localStorage.setItem("userStore", JSON.stringify(parsed));
+			}
+		} catch (error) {
+			// If parsing fails, remove the entire store
+			localStorage.removeItem("userStore");
+		}
+	}
+
 	private setupInterceptors() {
 		this.client.interceptors.request.use(
 			(config) => {
 				// Add auth token if available
-				const token = localStorage.getItem("userToken");
+				const token = this.getAccessToken();
 				if (token) {
 					config.headers.Authorization = `Bearer ${token}`;
 				}
@@ -41,9 +78,9 @@ class ApiClient {
 			(response) => response.data,
 			(error) => {
 				if (error.response?.status === 401) {
-					// Handle unauthorized
-					localStorage.removeItem("userToken");
-					window.location.href = "/login";
+					// Handle unauthorized - clear auth storage and redirect to login
+					this.clearAuthStorage();
+					window.location.href = "/auth/login";
 				}
 				return Promise.reject(error);
 			},

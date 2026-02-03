@@ -1,9 +1,15 @@
-import type { SubscriptionEntity, SubscriptionListResponse, SubscriptionStatus } from "../entities/SubscriptionEntity";
+import type {
+	SubscriptionEntity,
+	SubscriptionListResponse,
+	SubscriptionEstado,
+	SubscriptionCreateRequest,
+	SubscriptionUpdateRequest,
+} from "../entities/SubscriptionEntity";
 
 export interface SubscriptionRepository {
-	getAll(filters?: { status?: SubscriptionStatus; page?: number; pageSize?: number }): Promise<SubscriptionListResponse>;
+	getAll(filters?: { estado?: SubscriptionEstado; page?: number; pageSize?: number }): Promise<SubscriptionListResponse>;
 	getById(id: string): Promise<SubscriptionEntity>;
-	create(data: Omit<SubscriptionEntity, "id">): Promise<SubscriptionEntity>;
-	update(id: string, data: Partial<SubscriptionEntity>): Promise<SubscriptionEntity>;
+	create(data: SubscriptionCreateRequest): Promise<SubscriptionEntity>;
+	update(id: string, data: SubscriptionUpdateRequest): Promise<SubscriptionEntity>;
 	delete(id: string): Promise<void>;
 }

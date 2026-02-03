@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Outlet, type RouteObject } from "react-router";
+import type { RouteObject } from "react-router";
 import { LineLoading } from "@/components/loading";
 import SimpleLayout from "@/core/layouts/simple";
 
@@ -9,18 +9,33 @@ const Page500 = lazy(() => import("@/core/pages/sys/error/Page500"));
 
 export const mainRoutes: RouteObject[] = [
 	{
-		path: "/",
+		path: "/500",
 		element: (
 			<SimpleLayout>
 				<Suspense fallback={<LineLoading />}>
-					<Outlet />
+					<Page500 />
 				</Suspense>
 			</SimpleLayout>
 		),
-		children: [
-			{ path: "500", element: <Page500 /> },
-			{ path: "404", element: <Page404 /> },
-			{ path: "403", element: <Page403 /> },
-		],
+	},
+	{
+		path: "/404",
+		element: (
+			<SimpleLayout>
+				<Suspense fallback={<LineLoading />}>
+					<Page404 />
+				</Suspense>
+			</SimpleLayout>
+		),
+	},
+	{
+		path: "/403",
+		element: (
+			<SimpleLayout>
+				<Suspense fallback={<LineLoading />}>
+					<Page403 />
+				</Suspense>
+			</SimpleLayout>
+		),
 	},
 ];

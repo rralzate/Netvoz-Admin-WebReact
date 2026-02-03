@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { container } from "@/core/di/DIContainer";
 import { AUTH_TOKENS } from "../../di/auth.container.config";
@@ -11,12 +12,19 @@ import type {
  * Hook para enviar código de verificación por email
  */
 export const useSendVerificationCode = () => {
-	const sendVerificationCodeUseCase = container.get<SendVerificationCodeUseCase>(
-		AUTH_TOKENS.SendVerificationCodeUseCase,
-	);
+	const sendVerificationCodeUseCase = useMemo(() => {
+		if (!container.has(AUTH_TOKENS.SendVerificationCodeUseCase)) {
+			console.warn("SendVerificationCodeUseCase not registered in container");
+			return null;
+		}
+		return container.get<SendVerificationCodeUseCase>(AUTH_TOKENS.SendVerificationCodeUseCase);
+	}, []);
 
 	return useMutation({
 		mutationFn: async (email: string) => {
+			if (!sendVerificationCodeUseCase) {
+				throw new Error("SendVerificationCodeUseCase not available");
+			}
 			return await sendVerificationCodeUseCase.execute(email);
 		},
 		onError: (error) => {
@@ -29,12 +37,19 @@ export const useSendVerificationCode = () => {
  * Hook para validar código de verificación
  */
 export const useValidateVerificationCode = () => {
-	const validateVerificationCodeUseCase = container.get<ValidateVerificationCodeUseCase>(
-		AUTH_TOKENS.ValidateVerificationCodeUseCase,
-	);
+	const validateVerificationCodeUseCase = useMemo(() => {
+		if (!container.has(AUTH_TOKENS.ValidateVerificationCodeUseCase)) {
+			console.warn("ValidateVerificationCodeUseCase not registered in container");
+			return null;
+		}
+		return container.get<ValidateVerificationCodeUseCase>(AUTH_TOKENS.ValidateVerificationCodeUseCase);
+	}, []);
 
 	return useMutation({
 		mutationFn: async ({ code, email }: { code: string; email: string }) => {
+			if (!validateVerificationCodeUseCase) {
+				throw new Error("ValidateVerificationCodeUseCase not available");
+			}
 			return await validateVerificationCodeUseCase.execute(code, email);
 		},
 		onError: (error) => {
@@ -47,10 +62,19 @@ export const useValidateVerificationCode = () => {
  * Hook para cambiar contraseña
  */
 export const useChangePassword = () => {
-	const changePasswordUseCase = container.get<ChangePasswordUseCase>(AUTH_TOKENS.ChangePasswordUseCase);
+	const changePasswordUseCase = useMemo(() => {
+		if (!container.has(AUTH_TOKENS.ChangePasswordUseCase)) {
+			console.warn("ChangePasswordUseCase not registered in container");
+			return null;
+		}
+		return container.get<ChangePasswordUseCase>(AUTH_TOKENS.ChangePasswordUseCase);
+	}, []);
 
 	return useMutation({
 		mutationFn: async ({ email, newPassword }: { email: string; newPassword: string }) => {
+			if (!changePasswordUseCase) {
+				throw new Error("ChangePasswordUseCase not available");
+			}
 			return await changePasswordUseCase.execute(email, newPassword);
 		},
 		onError: (error) => {

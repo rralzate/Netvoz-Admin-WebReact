@@ -6,6 +6,12 @@ const Pages = {
 	...import.meta.glob("/src/core/pages/**/*.tsx"),
 	...import.meta.glob("/src/features/**/pages/**/*.tsx"),
 };
+
+// Debug: Log available pages in development
+if (import.meta.env.DEV) {
+	console.log("Available pages:", Object.keys(Pages));
+}
+
 const lazyComponentCache = new Map<string, React.LazyExoticComponent<any>>();
 
 export const loadComponentFromPath = (path: string) => {
@@ -25,7 +31,25 @@ export const Component = (path = "", props?: any): React.ReactNode => {
 	if (!importFn) importFn = Pages[`/src${path}/index.tsx`];
 	if (!importFn) {
 		console.warn("Component not found for path:", path);
-		return null;
+		console.warn("Available pages:", Object.keys(Pages));
+		// Return a fallback component instead of null to prevent 404 redirect
+		return (
+			<div className="flex items-center justify-center p-8">
+				<div className="text-center">
+					<h3 className="text-lg font-semibold text-gray-900 mb-2">Página no encontrada</h3>
+					<p className="text-gray-600 mb-4">
+						No se pudo cargar el componente: {path}
+					</p>
+					<button
+						type="button"
+						onClick={() => window.location.reload()}
+						className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+					>
+						Recargar página
+					</button>
+				</div>
+			</div>
+		);
 	}
 
 	let Element = lazyComponentCache.get(path);

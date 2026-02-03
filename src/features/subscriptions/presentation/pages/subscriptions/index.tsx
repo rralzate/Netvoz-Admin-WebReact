@@ -1,100 +1,48 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 import { Icon } from "@/components/icon";
 import { Button } from "@/core/ui/button";
 import { Badge } from "@/core/ui/badge";
+import { Input } from "@/core/ui/input";
 import { cn } from "@/core/utils";
-import type { PlanType, SubscriptionEntity, SubscriptionStatus } from "../../../domain/entities/SubscriptionEntity";
+import type {
+	SubscriptionEstado,
+	SubscriptionMoneda,
+} from "../../../domain/entities/SubscriptionEntity";
+import { useSubscriptions } from "../../hooks/useSubscriptions";
 
-// Mock data for demonstration - replace with useSubscriptions hook when API is ready
-const mockSubscriptions: SubscriptionEntity[] = [
-	{
-		id: "neg1",
-		negocioId: "neg1",
-		negocioNombre: "Restaurante El Buen Sabor",
-		plan: "profesional",
-		estado: "activa",
-		fechaVencimiento: "2025-02-15",
-		valorMensual: 99900,
-	},
-	{
-		id: "neg2",
-		negocioId: "neg2",
-		negocioNombre: "Tienda Moda Express",
-		plan: "basico",
-		estado: "pendiente",
-		fechaVencimiento: "2025-01-01",
-		valorMensual: 49900,
-	},
-	{
-		id: "neg3",
-		negocioId: "neg3",
-		negocioNombre: "Farmacia Salud Total",
-		plan: "enterprise",
-		estado: "activa",
-		fechaVencimiento: "2025-03-10",
-		valorMensual: 199900,
-	},
-	{
-		id: "neg4",
-		negocioId: "neg4",
-		negocioNombre: "Café Aroma",
-		plan: "basico",
-		estado: "vencida",
-		fechaVencimiento: "2025-01-01",
-		valorMensual: 49900,
-	},
-	{
-		id: "neg5",
-		negocioId: "neg5",
-		negocioNombre: "Supermercado Don Pedro",
-		plan: "profesional",
-		estado: "suspendida",
-		fechaVencimiento: "2025-02-15",
-		valorMensual: 99900,
-	},
-];
-
-type FilterTab = "todos" | SubscriptionStatus;
+type FilterTab = "todos" | SubscriptionEstado;
 
 const filterTabs: { key: FilterTab; label: string }[] = [
 	{ key: "todos", label: "Todos" },
 	{ key: "activa", label: "Activas" },
-	{ key: "pendiente", label: "Pendientes" },
+	{ key: "pendiente_pago", label: "Pendientes" },
 	{ key: "vencida", label: "Vencidas" },
 	{ key: "suspendida", label: "Suspendidas" },
+	{ key: "cancelada", label: "Canceladas" },
 ];
 
-const planColors: Record<PlanType, string> = {
-	basico: "bg-yellow-100 text-yellow-800 border-yellow-200",
-	profesional: "bg-pink-100 text-pink-800 border-pink-200",
-	enterprise: "bg-purple-100 text-purple-800 border-purple-200",
-};
-
-const planLabels: Record<PlanType, string> = {
-	basico: "Básico",
-	profesional: "Profesional",
-	enterprise: "Enterprise",
-};
-
-const statusColors: Record<SubscriptionStatus, string> = {
+const statusColors: Record<SubscriptionEstado, string> = {
 	activa: "bg-green-100 text-green-800 border-green-200",
-	pendiente: "bg-orange-100 text-orange-800 border-orange-200",
+	pendiente_pago: "bg-orange-100 text-orange-800 border-orange-200",
 	vencida: "bg-yellow-100 text-yellow-800 border-yellow-200",
 	suspendida: "bg-gray-100 text-gray-800 border-gray-200",
+	cancelada: "bg-red-100 text-red-800 border-red-200",
 };
 
-const statusLabels: Record<SubscriptionStatus, string> = {
+const statusLabels: Record<SubscriptionEstado, string> = {
 	activa: "Activa",
-	pendiente: "Pendiente",
+	pendiente_pago: "Pendiente Pago",
 	vencida: "Vencida",
 	suspendida: "Suspendida",
+	cancelada: "Cancelada",
 };
 
-function formatCurrency(value: number): string {
-	return new Intl.NumberFormat("es-CO", {
+function formatCurrency(value: number, moneda: SubscriptionMoneda = "COP"): string {
+	return new Intl.NumberFormat(moneda === "COP" ? "es-CO" : "en-US", {
 		style: "currency",
-		currency: "COP",
+		currency: moneda,
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0,
 	}).format(value);
@@ -110,35 +58,85 @@ function formatDate(dateString: string): string {
 
 export function SubscriptionsPage() {
 	const { t } = useTranslation();
+	const navigate = useNavigate();
 	const [activeFilter, setActiveFilter] = useState<FilterTab>("todos");
 
-	// Filter subscriptions based on active tab
-	const filteredSubscriptions = mockSubscriptions.filter((sub) => {
-		if (activeFilter === "todos") return true;
-		return sub.estado === activeFilter;
-	});
+	const {
+		filteredSubscriptions,
+		isLoading,
+		error,
+		searchTerm,
+		setSearchTerm,
+		setFilterEstado,
+		loadSubscriptions,
+	} = useSubscriptions();
+
+	// Handle filter change
+	const handleFilterChange = (filter: FilterTab) => {
+		setActiveFilter(filter);
+		setFilterEstado(filter === "todos" ? null : filter);
+	};
+
+	// Show loading state
+	if (isLoading && filteredSubscriptions.length === 0) {
+		return (
+			<div className="p-6 flex items-center justify-center min-h-[400px]">
+				<Icon icon="lucide:loader-2" className="animate-spin mr-2" size={24} />
+				<span>{t("common.loading", "Cargando...")}</span>
+			</div>
+		);
+	}
+
+	// Show error state
+	if (error) {
+		return (
+			<div className="p-6">
+				<div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+					<p>{error}</p>
+					<Button variant="outline" className="mt-2" onClick={loadSubscriptions}>
+						{t("common.retry", "Reintentar")}
+					</Button>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="p-6">
 			{/* Header */}
 			<div className="flex items-center justify-between mb-6">
 				<div>
-					<h1 className="text-2xl font-bold">{t("subscriptions.title")}</h1>
-					<p className="text-muted-foreground mt-1">{t("subscriptions.description")}</p>
+					<h1 className="text-2xl font-bold">{t("subscriptions.title", "Suscripciones")}</h1>
+					<p className="text-muted-foreground mt-1">
+						{t("subscriptions.description", "Gestiona las suscripciones de los negocios")}
+					</p>
 				</div>
-				<Button className="bg-primary hover:bg-primary/90 text-white text-xs font-medium py-1.5 px-3 rounded-md transition-colors duration-200">
-					<Icon icon="lucide:plus" className="mr-2 h-4 w-4" />
-					Nueva Suscripción
-				</Button>
+			</div>
+
+			{/* Search */}
+			<div className="mb-4">
+				<div className="relative max-w-md">
+					<Icon
+						icon="lucide:search"
+						className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+						size={18}
+					/>
+					<Input
+						placeholder={t("subscriptions.search", "Buscar por negocio o plan...")}
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="pl-10"
+					/>
+				</div>
 			</div>
 
 			{/* Filter Tabs */}
-			<div className="flex gap-2 mb-6">
+			<div className="flex gap-2 mb-6 flex-wrap">
 				{filterTabs.map((tab) => (
 					<button
 						key={tab.key}
 						type="button"
-						onClick={() => setActiveFilter(tab.key)}
+						onClick={() => handleFilterChange(tab.key)}
 						className={cn(
 							"px-4 py-2 rounded-full text-sm font-medium transition-colors",
 							activeFilter === tab.key
@@ -161,32 +159,56 @@ export function SubscriptionsPage() {
 							<th className="text-left p-4 font-medium text-muted-foreground text-sm">ESTADO</th>
 							<th className="text-left p-4 font-medium text-muted-foreground text-sm">VENCIMIENTO</th>
 							<th className="text-left p-4 font-medium text-muted-foreground text-sm">VALOR MENSUAL</th>
+							<th className="text-left p-4 font-medium text-muted-foreground text-sm">RENOVACIÓN</th>
 							<th className="text-left p-4 font-medium text-muted-foreground text-sm">ACCIONES</th>
 						</tr>
 					</thead>
 					<tbody>
 						{filteredSubscriptions.map((subscription) => (
-							<tr key={subscription.id} className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
+							<tr
+								key={subscription.id}
+								className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+							>
 								<td className="p-4">
 									<div>
-										<p className="font-medium">{subscription.negocioNombre}</p>
+										<p className="font-medium">{subscription.nombreNegocio || "Sin nombre"}</p>
 										<p className="text-sm text-muted-foreground">ID: {subscription.negocioId}</p>
 									</div>
 								</td>
 								<td className="p-4">
-									<Badge variant="outline" className={cn("font-medium", planColors[subscription.plan])}>
-										{planLabels[subscription.plan]}
-									</Badge>
+									<span className="font-medium">{subscription.nombrePlan || "Sin plan"}</span>
 								</td>
 								<td className="p-4">
-									<Badge variant="outline" className={cn("font-medium", statusColors[subscription.estado])}>
+									<Badge
+										variant="outline"
+										className={cn("font-medium", statusColors[subscription.estado])}
+									>
 										{statusLabels[subscription.estado]}
 									</Badge>
 								</td>
 								<td className="p-4 text-sm">{formatDate(subscription.fechaVencimiento)}</td>
-								<td className="p-4 font-medium">{formatCurrency(subscription.valorMensual)}</td>
+								<td className="p-4 font-medium">
+									{formatCurrency(subscription.valorMensual, subscription.moneda)}
+								</td>
 								<td className="p-4">
-									<Button variant="outline" size="sm">
+									{subscription.renovacionAutomatica ? (
+										<Badge
+											variant="outline"
+											className="bg-blue-50 text-blue-700 border-blue-200"
+										>
+											<Icon icon="lucide:refresh-cw" className="mr-1 h-3 w-3" />
+											Auto
+										</Badge>
+									) : (
+										<span className="text-muted-foreground text-sm">Manual</span>
+									)}
+								</td>
+								<td className="p-4">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => navigate(`/subscriptions/${subscription.id}`)}
+									>
 										Ver Detalle
 									</Button>
 								</td>
@@ -194,14 +216,26 @@ export function SubscriptionsPage() {
 						))}
 						{filteredSubscriptions.length === 0 && (
 							<tr>
-								<td colSpan={6} className="p-8 text-center text-muted-foreground">
-									No se encontraron suscripciones
+								<td colSpan={7} className="p-8 text-center text-muted-foreground">
+									{searchTerm
+										? t("subscriptions.noResults", "No se encontraron suscripciones")
+										: t("subscriptions.empty", "No hay suscripciones registradas")}
 								</td>
 							</tr>
 						)}
 					</tbody>
 				</table>
 			</div>
+
+			{/* Loading overlay */}
+			{isLoading && filteredSubscriptions.length > 0 && (
+				<div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
+					<div className="bg-white rounded-lg p-4 flex items-center gap-2">
+						<Icon icon="lucide:loader-2" className="animate-spin" size={20} />
+						<span>{t("common.loading", "Cargando...")}</span>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }

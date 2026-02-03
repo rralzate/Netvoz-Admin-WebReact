@@ -12,6 +12,10 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 			element: Component("/features/subscriptions/presentation/pages/subscriptions"),
 		},
 		{
+			path: "subscriptions/:id",
+			element: Component("/features/subscriptions/presentation/pages/subscriptions/detail"),
+		},
+		{
 			path: "plans",
 			element: Component("/features/plans/presentation/pages/PlansPage"),
 		},

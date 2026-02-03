@@ -10,22 +10,22 @@ import {
 } from "../domain/usecases";
 import { RegisterUseCase } from "../domain/usecases/RegisterUseCase";
 
-// Service tokens (símbolos únicos para evitar colisiones)
+// Service tokens (símbolos únicos globales para evitar problemas de hot reload)
 export const TOKENS = {
 	// Datasources
-	AuthDatasource: Symbol("AuthDatasource"),
+	AuthDatasource: Symbol.for("AuthDatasource"),
 
 	// Repositories
-	AuthRepository: Symbol("AuthRepository"),
+	AuthRepository: Symbol.for("AuthRepository"),
 
 	// Use Cases
-	LoginUseCase: Symbol("LoginUseCase"),
-	LogoutUseCase: Symbol("LogoutUseCase"),
-	RefreshTokenUseCase: Symbol("RefreshTokenUseCase"),
-	RegisterUseCase: Symbol("RegisterUseCase"),
-	SendVerificationCodeUseCase: Symbol("SendVerificationCodeUseCase"),
-	ValidateVerificationCodeUseCase: Symbol("ValidateVerificationCodeUseCase"),
-	ChangePasswordUseCase: Symbol("ChangePasswordUseCase"),
+	LoginUseCase: Symbol.for("LoginUseCase"),
+	LogoutUseCase: Symbol.for("LogoutUseCase"),
+	RefreshTokenUseCase: Symbol.for("RefreshTokenUseCase"),
+	RegisterUseCase: Symbol.for("RegisterUseCase"),
+	SendVerificationCodeUseCase: Symbol.for("SendVerificationCodeUseCase"),
+	ValidateVerificationCodeUseCase: Symbol.for("ValidateVerificationCodeUseCase"),
+	ChangePasswordUseCase: Symbol.for("ChangePasswordUseCase"),
 } as const;
 
 // Export tokens for external use
