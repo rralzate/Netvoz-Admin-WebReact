@@ -31,7 +31,7 @@ function AvatarInitials({ nombre, apellido, className }: { nombre?: string; apel
 	return (
 		<div
 			className={cn(
-				"flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold",
+				"flex items-center justify-center rounded-full bg-primary text-white font-semibold",
 				className
 			)}
 		>
