@@ -1,5 +1,5 @@
 export const urls: Record<string, string> = {
-	login: "/auth/login",
+	login: "/auth/login-admin",
 	signup: "/auth/register",
 	refresh: "/auth/refresh-token",
 	logout: "/auth/logout",

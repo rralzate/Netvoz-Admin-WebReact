@@ -3,6 +3,7 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 import { AntdAdapter } from "./core/theme/adapter/antd.adapter";
 import { ThemeProvider } from "./core/theme/theme-provider";
 import { GLOBAL_CONFIG } from "./global-config";
+import Toast from "./components/toast";
 
 function App({ children }: { children: React.ReactNode }) {
 	const queryClient = new QueryClient({
@@ -22,6 +23,7 @@ function App({ children }: { children: React.ReactNode }) {
 						<title>{GLOBAL_CONFIG.appName}</title>
 					</Helmet>
 					{children}
+					<Toast />
 				</ThemeProvider>
 			</QueryClientProvider>
 		</HelmetProvider>

@@ -8,11 +8,17 @@ import type {
 } from "../../domain/entities/SubscriptionEntity";
 import { urls } from "./constants";
 
+export interface ChangePlanRequest {
+	planId: string;
+	nombrePlan: string;
+}
+
 export interface SubscriptionDatasource {
 	getAll(filters?: { estado?: SubscriptionEstado; page?: number; pageSize?: number }): Promise<SubscriptionListResponse>;
 	getById(id: string): Promise<SubscriptionEntity>;
 	create(data: SubscriptionCreateRequest): Promise<SubscriptionEntity>;
 	update(id: string, data: SubscriptionUpdateRequest): Promise<SubscriptionEntity>;
+	changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity>;
 	delete(id: string): Promise<void>;
 }
 
@@ -111,6 +117,27 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 		};
 
 		console.log("SubscriptionDatasource.update - Mapped:", mapped);
+		return mapped;
+	}
+
+	async changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity> {
+		console.log("SubscriptionDatasource.changePlan - URL:", urls.subscriptionChangePlan(id));
+		console.log("SubscriptionDatasource.changePlan - Data:", JSON.stringify(data, null, 2));
+
+		const response = await APIClient.put<any>({ url: urls.subscriptionChangePlan(id), data });
+
+		console.log("SubscriptionDatasource.changePlan - Raw Response:", response);
+
+		// La API envuelve la respuesta en { data: {...}, status: "success", ... }
+		const subscriptionData = response?.data || response;
+
+		// Mapear _id a id si es necesario
+		const mapped = {
+			...subscriptionData,
+			id: subscriptionData.id || subscriptionData._id,
+		};
+
+		console.log("SubscriptionDatasource.changePlan - Mapped:", mapped);
 		return mapped;
 	}
 

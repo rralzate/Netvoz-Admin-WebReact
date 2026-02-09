@@ -140,7 +140,7 @@ export function SubscriptionsPage() {
 						className={cn(
 							"px-4 py-2 rounded-full text-sm font-medium transition-colors",
 							activeFilter === tab.key
-								? "bg-primary text-primary-foreground"
+								? "bg-primary text-white"
 								: "bg-muted hover:bg-muted/80 text-muted-foreground"
 						)}
 					>

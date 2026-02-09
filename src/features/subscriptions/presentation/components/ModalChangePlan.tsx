@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/components/icon";
 import { Button } from "@/core/ui/button";
@@ -44,9 +44,16 @@ export function ModalChangePlan({
 	const { t } = useTranslation();
 	const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+  console.log("plan", subscription, plans)
+	// Pre-select current plan when modal opens
+	useEffect(() => {
+		if (isOpen && subscription.planId) {
+			setSelectedPlanId(subscription.planId);
+		}
+	}, [isOpen, subscription.planId]);
 
-	// Filter only active plans
-	const activePlans = plans.filter((plan) => plan.activo !== false);
+	// Filter only active plans (include demo plan always)
+	const activePlans = plans.filter((plan) => plan.activo !== false || plan.nombre?.toLowerCase().includes("demo"));
 
 	const selectedPlan = activePlans.find((p) => p.id === selectedPlanId);
 
@@ -132,7 +139,7 @@ export function ModalChangePlan({
 						</p>
 					</div>
 				) : (
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
 						{activePlans.map((plan) => {
 							const isSelected = selectedPlanId === plan.id;
 							const isCurrentPlan = plan.id === subscription.planId;
@@ -143,12 +150,11 @@ export function ModalChangePlan({
 								<button
 									key={plan.id}
 									type="button"
-									onClick={() => !isCurrentPlan && setSelectedPlanId(plan.id)}
-									disabled={isCurrentPlan}
+									onClick={() => setSelectedPlanId(plan.id)}
 									className={cn(
 										"relative text-left p-4 rounded-lg border-2 transition-all",
 										isSelected && "border-primary bg-primary/5",
-										isCurrentPlan && "border-muted bg-muted/30 cursor-not-allowed opacity-60",
+										isCurrentPlan && !isSelected && "border-blue-300 bg-blue-50/50",
 										!isSelected && !isCurrentPlan && "border-border hover:border-primary/50 hover:bg-muted/30"
 									)}
 								>
@@ -161,7 +167,7 @@ export function ModalChangePlan({
 
 									{/* Current plan badge */}
 									{isCurrentPlan && (
-										<Badge variant="outline" className="absolute -top-2 left-2 text-xs">
+										<Badge className="absolute -top-2 left-2 text-xs bg-blue-500 text-white">
 											Plan Actual
 										</Badge>
 									)}
@@ -204,8 +210,8 @@ export function ModalChangePlan({
 											<span className="font-medium">{(caracteristicas.maxProductos ?? 0).toLocaleString()}</span>
 										</div>
 										<div className="flex justify-between">
-											<span>Facturas/mes:</span>
-											<span className="font-medium">{(caracteristicas.maxFacturasPorMes ?? 0).toLocaleString()}</span>
+											<span>Cajas:</span>
+											<span className="font-medium">{caracteristicas.maxCajasRegistradoras ?? 0}</span>
 										</div>
 									</div>
 
@@ -219,6 +225,11 @@ export function ModalChangePlan({
 										{caracteristicas.reportesAvanzados && (
 											<Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
 												Reportes
+											</Badge>
+										)}
+										{caracteristicas.integracionContabilidad && (
+											<Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+												Contabilidad
 											</Badge>
 										)}
 										{caracteristicas.backup && (
@@ -240,6 +251,24 @@ export function ModalChangePlan({
 					</div>
 				)}
 
+				{/* Selected Plan Summary */}
+				{selectedPlan && (
+					<div className="bg-primary/10 rounded-lg p-4 mt-4 border border-primary/20">
+						<p className="text-sm text-muted-foreground mb-1">Plan seleccionado</p>
+						<div className="flex items-center justify-between">
+							<span className="font-semibold text-primary">{selectedPlan.nombre}</span>
+							<span className="font-semibold">
+								{formatCurrency(selectedPlan.precio, selectedPlan.moneda)}/mes
+							</span>
+						</div>
+						{selectedPlanId === subscription.planId && (
+							<p className="text-xs text-muted-foreground mt-2">
+								Este es tu plan actual. Puedes confirmar para mantenerlo.
+							</p>
+						)}
+					</div>
+				)}
+
 				<DialogFooter className="mt-6">
 					<Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
 						{t("common.cancel", "Cancelar")}
@@ -253,6 +282,11 @@ export function ModalChangePlan({
 							<>
 								<Icon icon="lucide:loader-2" className="mr-2 h-4 w-4 animate-spin" />
 								{t("common.saving", "Guardando...")}
+							</>
+						) : selectedPlanId === subscription.planId ? (
+							<>
+								<Icon icon="lucide:check" className="mr-2 h-4 w-4" />
+								{t("subscriptions.changePlan.keep", "Mantener Plan")}
 							</>
 						) : (
 							<>

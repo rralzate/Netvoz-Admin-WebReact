@@ -17,6 +17,9 @@ export interface AuthDatasource {
 	changePassword: (email: string, newPassword: string) => Promise<boolean>;
 }
 
+// Admin token for login-admin endpoint
+const ADMIN_TOKEN = "8lgkgjeEs1pepExJJbnTNZbaTSh4OxZ9o19jGrpo34kw8du0dXaAsJd441xWeviSeXMmDIy4yX/BUtTizh6nIw==";
+
 export class AuthDatasourceImpl implements AuthDatasource {
 	signin = async (data: LoginModel): Promise<LoginResponseModel> => {
 		try {
@@ -25,6 +28,7 @@ export class AuthDatasourceImpl implements AuthDatasource {
 				data: {
 					email: data.email,
 					password: data.password,
+					adminToken: ADMIN_TOKEN,
 				},
 			});
 

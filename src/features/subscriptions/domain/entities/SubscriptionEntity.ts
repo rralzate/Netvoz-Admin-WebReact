@@ -31,9 +31,11 @@ export interface SubscriptionLimitesActuales {
 	maxUsuarios: number;
 	maxProductos: number;
 	maxFacturasPorMes: number;
+	maxCajasRegistradoras: number;
 	usuariosActivos: number;
 	productosCreados: number;
 	facturasDelMes: number;
+	cajasActivas: number;
 }
 
 // Estado de la suscripción

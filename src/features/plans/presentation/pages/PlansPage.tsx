@@ -51,7 +51,7 @@ function PlanCard({ plan, onEdit }: PlanCardProps) {
 	const caracteristicas = plan.caracteristicas || {};
 	const maxUsuarios = caracteristicas.maxUsuarios ?? 0;
 	const maxProductos = caracteristicas.maxProductos ?? 0;
-	const maxFacturasPorMes = caracteristicas.maxFacturasPorMes ?? 0;
+	const maxCajasRegistradoras = caracteristicas.maxCajasRegistradoras ?? 0;
 
 	const features: FeatureItem[] = [
 		{ nombre: "Soporte", incluido: caracteristicas.soporteTecnico ?? false },
@@ -92,8 +92,8 @@ function PlanCard({ plan, onEdit }: PlanCardProps) {
 					<span className="font-medium">{maxProductos.toLocaleString()}</span>
 				</div>
 				<div className="flex justify-between">
-					<span className="text-muted-foreground">Facturas/mes</span>
-					<span className="font-medium">{maxFacturasPorMes.toLocaleString()}</span>
+					<span className="text-muted-foreground">Cajas</span>
+					<span className="font-medium">{maxCajasRegistradoras.toLocaleString()}</span>
 				</div>
 			</div>
 

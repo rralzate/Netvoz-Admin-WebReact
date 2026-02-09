@@ -12,3 +12,6 @@ export { UpdateSubscriptionUseCaseImpl } from "./UpdateSubscriptionUseCase";
 
 export type { DeleteSubscriptionUseCase } from "./DeleteSubscriptionUseCase";
 export { DeleteSubscriptionUseCaseImpl } from "./DeleteSubscriptionUseCase";
+
+export type { ChangePlanUseCase } from "./ChangePlanUseCase";
+export { ChangePlanUseCaseImpl } from "./ChangePlanUseCase";

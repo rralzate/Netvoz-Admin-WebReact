@@ -3,6 +3,7 @@ import { authConfigureContainer } from "@/features/auth/di/auth.container.config
 import { subscriptionsConfigureContainer } from "@/features/subscriptions/di/subscriptions.container.config";
 import { plansConfigureContainer } from "@/features/plans/di/plans.container.config";
 import { paymentsConfigureContainer } from "@/features/payments/di/payments.container.config";
+import { workbenchConfigureContainer } from "@/features/workbench/di/workbench.container.config";
 
 export function configureContainer() {
 	// Configure auth module
@@ -16,4 +17,7 @@ export function configureContainer() {
 
 	// Configure payments module
 	paymentsConfigureContainer();
+
+	// Configure workbench module
+	workbenchConfigureContainer();
 }

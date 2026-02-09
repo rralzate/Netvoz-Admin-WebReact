@@ -132,10 +132,6 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 			newErrors.maxProductos = t("plans.form.errors.maxProductosInvalid", "Debe permitir al menos 1 producto");
 		}
 
-		if (formData.caracteristicas.maxFacturasPorMes < 1) {
-			newErrors.maxFacturasPorMes = t("plans.form.errors.maxFacturasInvalid", "Debe permitir al menos 1 factura");
-		}
-
 		setErrors(newErrors);
 		return Object.keys(newErrors).length === 0;
 	};
@@ -290,7 +286,7 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 							{t("plans.form.limits", "Límites")}
 						</h3>
 
-						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+						<div className="grid grid-cols-3 gap-4">
 							<div className="space-y-2">
 								<Label htmlFor="maxUsuarios">{t("plans.form.maxUsuarios", "Max. Usuarios")} *</Label>
 								<Input
@@ -318,21 +314,6 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 								/>
 								{errors.maxProductos && (
 									<p className="text-xs text-red-500">{errors.maxProductos}</p>
-								)}
-							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="maxFacturasPorMes">{t("plans.form.maxFacturas", "Max. Facturas/mes")} *</Label>
-								<Input
-									id="maxFacturasPorMes"
-									type="number"
-									min={1}
-									value={formData.caracteristicas.maxFacturasPorMes}
-									onChange={(e) => handleCaracteristicaChange("maxFacturasPorMes", parseInt(e.target.value) || 1)}
-									className={errors.maxFacturasPorMes ? "border-red-500" : ""}
-								/>
-								{errors.maxFacturasPorMes && (
-									<p className="text-xs text-red-500">{errors.maxFacturasPorMes}</p>
 								)}
 							</div>
 

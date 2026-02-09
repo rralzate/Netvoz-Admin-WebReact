@@ -7,7 +7,9 @@ import type {
 	CreateSubscriptionUseCase,
 	UpdateSubscriptionUseCase,
 	DeleteSubscriptionUseCase,
+	ChangePlanUseCase,
 } from "../../domain/usecases";
+import type { ChangePlanRequest } from "../../domain/repositories/SubscriptionRepository";
 import type {
 	SubscriptionEntity,
 	SubscriptionEstado,
@@ -48,6 +50,7 @@ export interface UseSubscriptionsReturn {
 	clearError: () => void;
 	createSubscription: (data: SubscriptionCreateRequest) => Promise<SubscriptionEntity | null>;
 	updateSubscription: (id: string, data: SubscriptionUpdateRequest) => Promise<SubscriptionEntity | null>;
+	changePlan: (id: string, data: ChangePlanRequest) => Promise<SubscriptionEntity | null>;
 	deleteSubscription: (id: string) => Promise<boolean>;
 
 	// Helpers
@@ -190,27 +193,89 @@ export const useSubscriptions = (): UseSubscriptionsReturn => {
 				const useCase = container.get<UpdateSubscriptionUseCase>(SUBSCRIPTION_TOKENS.UpdateSubscriptionUseCase);
 				const updatedSubscription = await useCase.execute(id, data);
 
+				// Merge the sent data with the response to ensure all fields are updated
+				// This handles cases where the backend doesn't return all updated fields
+				const mergedSubscription: SubscriptionEntity = {
+					...updatedSubscription,
+					planId: updatedSubscription.planId || data.planId || updatedSubscription.planId,
+					nombrePlan: updatedSubscription.nombrePlan || data.nombrePlan,
+					valorMensual: updatedSubscription.valorMensual ?? data.valorMensual,
+					valorTotal: updatedSubscription.valorTotal ?? data.valorTotal,
+				};
+
+				console.log("useSubscriptions.updateSubscription - Merged:", mergedSubscription);
+
 				// Update state with updated subscription
 				setState((prev) => {
 					const updatedSubscriptions = prev.subscriptions.map((sub) =>
-						sub.id === id ? updatedSubscription : sub
+						sub.id === id ? mergedSubscription : sub
 					);
 					return {
 						...prev,
 						subscriptions: updatedSubscriptions,
 						filteredSubscriptions: applyFilters(updatedSubscriptions, prev.searchTerm, prev.filterEstado),
 						selectedSubscription:
-							prev.selectedSubscription?.id === id ? updatedSubscription : prev.selectedSubscription,
+							prev.selectedSubscription?.id === id ? mergedSubscription : prev.selectedSubscription,
 						isLoading: false,
 					};
 				});
 
-				return updatedSubscription;
+				return mergedSubscription;
 			} catch (error) {
 				const errorMessage =
 					error instanceof Error
 						? error.message
 						: t("subscriptions.errors.update", "Error al actualizar la suscripción");
+				setError(errorMessage);
+				setLoading(false);
+				return null;
+			}
+		},
+		[t, setLoading, setError, applyFilters]
+	);
+
+	// Change subscription plan
+	const changePlan = useCallback(
+		async (id: string, data: ChangePlanRequest): Promise<SubscriptionEntity | null> => {
+			try {
+				setLoading(true);
+				setError(null);
+
+				const useCase = container.get<ChangePlanUseCase>(SUBSCRIPTION_TOKENS.ChangePlanUseCase);
+				const updatedSubscription = await useCase.execute(id, data);
+
+				console.log("useSubscriptions.changePlan - Response:", updatedSubscription);
+
+				// Merge the sent data with the response to ensure plan fields are updated
+				const mergedSubscription: SubscriptionEntity = {
+					...updatedSubscription,
+					planId: updatedSubscription.planId || data.planId,
+					nombrePlan: updatedSubscription.nombrePlan || data.nombrePlan,
+				};
+
+				console.log("useSubscriptions.changePlan - Merged:", mergedSubscription);
+
+				// Update state with updated subscription
+				setState((prev) => {
+					const updatedSubscriptions = prev.subscriptions.map((sub) =>
+						sub.id === id ? mergedSubscription : sub
+					);
+					return {
+						...prev,
+						subscriptions: updatedSubscriptions,
+						filteredSubscriptions: applyFilters(updatedSubscriptions, prev.searchTerm, prev.filterEstado),
+						selectedSubscription:
+							prev.selectedSubscription?.id === id ? mergedSubscription : prev.selectedSubscription,
+						isLoading: false,
+					};
+				});
+
+				return mergedSubscription;
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: t("subscriptions.errors.changePlan", "Error al cambiar el plan");
 				setError(errorMessage);
 				setLoading(false);
 				return null;
@@ -353,6 +418,7 @@ export const useSubscriptions = (): UseSubscriptionsReturn => {
 		clearError,
 		createSubscription,
 		updateSubscription,
+		changePlan,
 		deleteSubscription,
 
 		// Helpers

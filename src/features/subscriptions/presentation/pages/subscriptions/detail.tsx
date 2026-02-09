@@ -15,7 +15,9 @@ import type {
 	SubscriptionPagoEstado,
 } from "../../../domain/entities/SubscriptionEntity";
 import { useSubscriptions } from "../../hooks/useSubscriptions";
+import { useBusinessInfo } from "../../hooks/useBusinessInfo";
 import { ModalChangePlan } from "../../components/ModalChangePlan";
+import { ModalGenerateInvoice } from "../../components/ModalGenerateInvoice";
 
 const statusColors: Record<SubscriptionEstado, string> = {
 	activa: "bg-green-100 text-green-700 border-green-200",
@@ -134,11 +136,13 @@ export function SubscriptionDetailPage() {
 	const { id } = useParams<{ id: string }>();
 	const [subscription, setSubscription] = useState<SubscriptionEntity | null>(null);
 	const [isChangePlanModalOpen, setIsChangePlanModalOpen] = useState(false);
+	const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
 	const {
 		subscriptions,
 		findSubscriptionById,
 		updateSubscription,
+		changePlan,
 		loadSubscriptions,
 		isLoading,
 		error,
@@ -147,6 +151,15 @@ export function SubscriptionDetailPage() {
 	// Get all plans for the change plan modal
 	const { plans, isLoading: isLoadingPlans } = usePlans();
 
+	// Get business info for resource usage and send reminder
+	const {
+		businessInfo,
+		isLoading: isLoadingBusinessInfo,
+		fetchBusinessInfo,
+		sendReminderEmail,
+		isSendingReminder,
+	} = useBusinessInfo();
+
 	// Find subscription from loaded list when subscriptions change or id changes
 	useEffect(() => {
 		if (id && subscriptions.length > 0) {
@@ -154,6 +167,29 @@ export function SubscriptionDetailPage() {
 			setSubscription(found || null);
 		}
 	}, [id, subscriptions, findSubscriptionById]);
+
+	// Fetch business info when subscription is loaded
+	useEffect(() => {
+		if (subscription?.negocioId) {
+			fetchBusinessInfo(subscription.negocioId);
+		}
+	}, [subscription?.negocioId, fetchBusinessInfo]);
+
+	// Get current plan to sync limits
+	const currentPlan = plans.find((p) => p.id === subscription?.planId);
+
+	// Get resource limits from plan with actual usage from business info
+	const resourceLimits = currentPlan?.caracteristicas
+		? {
+				maxUsuarios: currentPlan.caracteristicas.maxUsuarios ?? 0,
+				maxProductos: currentPlan.caracteristicas.maxProductos ?? 0,
+				maxCajasRegistradoras: currentPlan.caracteristicas.maxCajasRegistradoras ?? 0,
+				// Current usage values from business info API
+				usuariosActivos: businessInfo?.totalUsuarios ?? 0,
+				productosCreados: businessInfo?.totalProductos ?? 0,
+				cajasActivas: businessInfo?.totalCajasRegistradoras ?? 0,
+			}
+		: null;
 
 	// Handle status change
 	const handleStatusChange = async (newStatus: SubscriptionEstado) => {
@@ -177,33 +213,50 @@ export function SubscriptionDetailPage() {
 		}
 	};
 
-	// Handle plan change
-	const handleChangePlan = async (planId: string, planNombre: string, precio: number) => {
+	// Handle plan change - uses dedicated endpoint PUT /subscriptions/:id/plan
+	const handleChangePlan = async (planId: string, planNombre: string, _precio: number) => {
 		if (!subscription) return;
 
-		// Construimos el objeto de actualización con todos los campos necesarios
-		// Nota: El API puede no soportar planId en el update, pero lo enviamos por si acaso
-		const updateData = {
-			planId, // ID del nuevo plan
-			nombrePlan: planNombre, // Nombre del nuevo plan
-			valorMensual: precio, // Nuevo valor mensual
-			valorTotal: precio, // Nuevo valor total (asumimos suscripción mensual)
-			// Mantenemos otros campos de la suscripción actual
-			nombreNegocio: subscription.nombreNegocio,
-			estado: subscription.estado,
-			moneda: subscription.moneda || "COP",
-			renovacionAutomatica: subscription.renovacionAutomatica,
+		const changePlanData = {
+			planId,
+			nombrePlan: planNombre,
 		};
-		const updated = await updateSubscription(subscription.id, updateData);
+
+		console.log("handleChangePlan - Sending data:", changePlanData);
+
+		const updated = await changePlan(subscription.id, changePlanData);
+
+		console.log("handleChangePlan - Received updated:", updated);
 
 		if (updated) {
 			setSubscription(updated);
 			toast.success(t("subscriptions.changePlan.success", "Plan actualizado correctamente"));
 		} else {
-			// El error ya fue manejado en el hook y guardado en state.error
-			console.error("Error: updateSubscription retornó null. Ver error en el hook.");
+			console.error("Error: changePlan retornó null. Ver error en el hook.");
 			toast.error(t("subscriptions.changePlan.error", "Error al cambiar el plan"));
 			throw new Error("Failed to update subscription plan");
+		}
+	};
+
+	// Handle send reminder email
+	const handleSendReminder = async () => {
+		if (!subscription?.negocioId) return;
+
+		try {
+			const result = await sendReminderEmail(subscription.negocioId);
+			if (result?.emailSent) {
+				toast.success(
+					t("subscriptions.detail.reminderSent", "Recordatorio enviado a {email}").replace(
+						"{email}",
+						result.recipientEmail
+					)
+				);
+			} else {
+				toast.error(t("subscriptions.detail.reminderError", "Error al enviar el recordatorio"));
+			}
+		} catch (error) {
+			console.error("Error sending reminder:", error);
+			toast.error(t("subscriptions.detail.reminderError", "Error al enviar el recordatorio"));
 		}
 	};
 
@@ -417,27 +470,32 @@ export function SubscriptionDetailPage() {
 					<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
 						{t("subscriptions.detail.resourceUsage", "Uso de Recursos")}
 					</h3>
-					{subscription.limitesActuales ? (
+					{isLoadingPlans || isLoadingBusinessInfo ? (
+						<div className="flex items-center justify-center py-4">
+							<Icon icon="lucide:loader-2" className="animate-spin mr-2" size={20} />
+							<span className="text-muted-foreground text-sm">Cargando recursos...</span>
+						</div>
+					) : resourceLimits ? (
 						<div className="space-y-6">
 							<ProgressBar
 								label={t("subscriptions.detail.users", "Usuarios")}
-								current={subscription.limitesActuales.usuariosActivos ?? 0}
-								limit={subscription.limitesActuales.maxUsuarios ?? 1}
+								current={resourceLimits.usuariosActivos}
+								limit={resourceLimits.maxUsuarios || 1}
 							/>
 							<ProgressBar
 								label={t("subscriptions.detail.products", "Productos")}
-								current={subscription.limitesActuales.productosCreados ?? 0}
-								limit={subscription.limitesActuales.maxProductos ?? 1}
+								current={resourceLimits.productosCreados}
+								limit={resourceLimits.maxProductos || 1}
 							/>
 							<ProgressBar
-								label={t("subscriptions.detail.invoicesMonth", "Facturas del Mes")}
-								current={subscription.limitesActuales.facturasDelMes ?? 0}
-								limit={subscription.limitesActuales.maxFacturasPorMes ?? 1}
+								label={t("subscriptions.detail.cashRegisters", "Cajas Registradoras")}
+								current={resourceLimits.cajasActivas}
+								limit={resourceLimits.maxCajasRegistradoras || 1}
 							/>
 						</div>
 					) : (
 						<p className="text-muted-foreground text-center py-4">
-							No hay datos de recursos disponibles
+							No hay plan asociado para mostrar límites
 						</p>
 					)}
 				</div>
@@ -610,11 +668,21 @@ export function SubscriptionDetailPage() {
 							Cancelar Suscripción
 						</Button>
 					)}
-					<Button variant="outline">
-						<Icon icon="lucide:mail" className="mr-2 h-4 w-4" />
-						{t("subscriptions.detail.sendReminder", "Enviar Recordatorio")}
+					<Button
+						variant="outline"
+						onClick={handleSendReminder}
+						disabled={isSendingReminder}
+					>
+						{isSendingReminder ? (
+							<Icon icon="lucide:loader-2" className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							<Icon icon="lucide:mail" className="mr-2 h-4 w-4" />
+						)}
+						{isSendingReminder
+							? t("subscriptions.detail.sendingReminder", "Enviando...")
+							: t("subscriptions.detail.sendReminder", "Enviar Recordatorio")}
 					</Button>
-					<Button variant="outline">
+					<Button variant="outline" onClick={() => setIsInvoiceModalOpen(true)}>
 						<Icon icon="lucide:file-text" className="mr-2 h-4 w-4" />
 						Generar Factura
 					</Button>
@@ -629,6 +697,13 @@ export function SubscriptionDetailPage() {
 				subscription={subscription}
 				plans={plans}
 				isLoading={isLoadingPlans}
+			/>
+
+			{/* Modal para generar factura */}
+			<ModalGenerateInvoice
+				isOpen={isInvoiceModalOpen}
+				onClose={() => setIsInvoiceModalOpen(false)}
+				subscription={subscription}
 			/>
 		</div>
 	);
