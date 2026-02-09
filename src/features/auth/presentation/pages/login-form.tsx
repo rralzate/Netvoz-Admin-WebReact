@@ -1,3 +1,4 @@
+import axios from "axios";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -63,7 +64,31 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 			// Navigate to default route
 			navigate(GLOBAL_CONFIG.defaultRoute, { replace: true });
 		} catch (err) {
-			// Error handling with user-friendly messages
+			// Extract error message from axios error
+			let errorTitle = t("sys.login.loginFailed");
+			let errorDescription = t("sys.login.loginError");
+
+			if (axios.isAxiosError(err)) {
+				const data = err.response?.data as any;
+				
+				// Check for 422 (validation/authentication error)
+				if (err.response?.status === 422 || err.response?.status === 401) {
+					errorDescription = t("sys.login.loginFailedDescription");
+				}
+				
+				// Try to get custom message from backend
+				if (data?.responseMessage) {
+					errorDescription = data.responseMessage;
+				} else if (data?.message) {
+					errorDescription = data.message;
+				}
+			}
+
+			toast.error(errorTitle, {
+				description: errorDescription,
+				closeButton: true,
+			});
+
 			console.error("Login failed:", err);
 		}
 	};
@@ -172,17 +197,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 						{isLoading ? t("sys.login.signingIn") : t("sys.login.loginButton")}
 					</Button>
 
-					<div className="text-center text-sm">
-						{t("sys.login.noAccount")}
-						<Button
-							variant="link"
-							className="px-1"
-							onClick={() => setLoginState(LoginStateEnum.REGISTER)}
-							disabled={isLoading}
-						>
-							{t("sys.login.signUpFormTitle")}
-						</Button>
-					</div>
+
 				</form>
 			</Form>
 		</div>

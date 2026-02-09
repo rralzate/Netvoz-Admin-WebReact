@@ -81,6 +81,7 @@
 	--accent: var(--colors-palette-gray-200);
 	--accent-foreground: var(--colors-palette-gray-600);
 	--destructive: var(--colors-palette-error-default);
+	--destructive-foreground: var(--colors-common-white);
 	--border: rgba(var(--colors-palette-gray-500Channel) / var(--opacity-border));
 	--input: rgba(var(--colors-palette-gray-500Channel) / var(--opacity-border));
 	--ring: var(--colors-palette-primary-default);
@@ -115,6 +116,7 @@
 	--accent: var(--colors-background-neutral);
 	--accent-foreground: var(--colors-palette-gray-500);
 	--destructive: var(--colors-palette-error-default);
+	--destructive-foreground: var(--colors-common-white);
 	--border: rgba(var(--colors-palette-gray-500Channel) / var(--opacity-border));
 	--input: rgba(var(--colors-palette-gray-500Channel) / var(--opacity-border));
 	--ring: var(--colors-palette-primary-default);

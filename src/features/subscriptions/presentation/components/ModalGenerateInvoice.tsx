@@ -22,6 +22,7 @@ import {
 	SelectValue,
 } from "@/core/ui/select";
 import type { SubscriptionEntity } from "../../domain/entities/SubscriptionEntity";
+import logoImage from "@/assets/icons/ic-logo-badge.png";
 
 interface ModalGenerateInvoiceProps {
 	isOpen: boolean;
@@ -92,7 +93,7 @@ export function ModalGenerateInvoice({
 		setShowPreview(true);
 	};
 
-	const handleDownloadPDF = () => {
+	const handleDownloadPDF = async () => {
 		setIsGenerating(true);
 
 		try {
@@ -105,6 +106,26 @@ export function ModalGenerateInvoice({
 			const pageWidth = pdf.internal.pageSize.getWidth();
 			let y = 20;
 
+			// Add logo in top right corner
+			try {
+				// Load and convert image to base64
+				const response = await fetch(logoImage);
+				const blob = await response.blob();
+				const reader = new FileReader();
+				
+				await new Promise((resolve) => {
+					reader.onloadend = () => {
+						const base64data = reader.result as string;
+						// Add logo: x, y, width, height (positioned in top right)
+						pdf.addImage(base64data, "PNG", pageWidth - 40, 10, 25, 25);
+						resolve(true);
+					};
+					reader.readAsDataURL(blob);
+				});
+			} catch (logoError) {
+				console.warn("Could not add logo to PDF:", logoError);
+			}
+
 			// Header
 			pdf.setFontSize(24);
 			pdf.setFont("helvetica", "bold");
@@ -114,15 +135,17 @@ export function ModalGenerateInvoice({
 			pdf.setFont("helvetica", "normal");
 			pdf.text("Comprobante de Suscripción", 20, y + 8);
 
-			// Invoice number and date (right side)
-			pdf.setFontSize(12);
+			y += 15;
+
+			// Invoice number and date (below "Comprobante de Suscripción", left side)
+			pdf.setFontSize(11);
 			pdf.setFont("helvetica", "bold");
-			pdf.text(invoiceNumber, pageWidth - 20, y, { align: "right" });
+			pdf.text(invoiceNumber, 20, y);
 			pdf.setFont("helvetica", "normal");
 			pdf.setFontSize(10);
-			pdf.text(`Fecha: ${formatDate(new Date(formData.fechaPago))}`, pageWidth - 20, y + 8, { align: "right" });
+			pdf.text(`Fecha: ${formatDate(new Date(formData.fechaPago))}`, 20, y + 6);
 
-			y += 25;
+			y += 15;
 
 			// Line separator
 			pdf.setDrawColor(200, 200, 200);
@@ -136,7 +159,7 @@ export function ModalGenerateInvoice({
 			pdf.setFont("helvetica", "normal");
 			pdf.setFontSize(10);
 			pdf.text("Sistema de Gestión de Suscripciones", 20, y + 6);
-			pdf.text("soporte@netvoz.com", 20, y + 12);
+			pdf.text("netvozapp@gmail.com", 20, y + 12);
 
 			y += 25;
 
@@ -365,17 +388,22 @@ export function ModalGenerateInvoice({
 					// Invoice Preview
 					<div className="py-4">
 						<div
-							className="bg-white p-8 border rounded-lg"
+							className="bg-white p-8 border rounded-lg relative"
 							style={{ minHeight: "600px" }}
 						>
+							{/* Logo in top right corner */}
+							<img
+								src={logoImage}
+								alt="Netvoz"
+								className="absolute top-4 right-4 w-16 h-16 object-contain"
+							/>
+
 							{/* Invoice Header */}
-							<div className="flex justify-between items-start mb-8">
-								<div>
-									<h1 className="text-2xl font-bold text-gray-800">FACTURA DE PAGO</h1>
-									<p className="text-gray-600 mt-1">Comprobante de Suscripción</p>
-								</div>
-								<div className="text-right">
-									<p className="text-lg font-bold text-primary">{invoiceNumber}</p>
+							<div className="mb-8">
+								<h1 className="text-2xl font-bold text-gray-800">FACTURA DE PAGO</h1>
+								<p className="text-gray-600 mt-1">Comprobante de Suscripción</p>
+								<div className="mt-3">
+									<p className="text-base font-bold text-primary">{invoiceNumber}</p>
 									<p className="text-sm text-gray-600">
 										Fecha: {formatDate(new Date(formData.fechaPago))}
 									</p>
@@ -386,7 +414,7 @@ export function ModalGenerateInvoice({
 							<div className="mb-8 pb-4 border-b">
 								<h2 className="font-semibold text-gray-800">NETVOZ</h2>
 								<p className="text-sm text-gray-600">Sistema de Gestión de Suscripciones</p>
-								<p className="text-sm text-gray-600">soporte@netvoz.com</p>
+								<p className="text-sm text-gray-600">netvozapp@gmail.com</p>
 							</div>
 
 							{/* Client Info */}
