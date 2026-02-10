@@ -28,6 +28,9 @@ export default {
 			noAccount: "Don't have an account?",
 			loginSuccessTitle: "Login successful",
 			welcomeBack: "Welcome back,",
+			loginFailed: "Authentication error",
+			loginFailedDescription: "Invalid credentials. Please check your email and password.",
+			loginError: "Login error. Please try again.",
 
 			// Register form
 			signUpFormTitle: "Create Account",

@@ -28,6 +28,9 @@ export default {
 			noAccount: "¿No tienes una cuenta?",
 			loginSuccessTitle: "Inicio de sesión exitoso",
 			welcomeBack: "Bienvenido de nuevo,",
+			loginFailed: "Error de autenticación",
+			loginFailedDescription: "Credenciales inválidas. Por favor, verifica tu correo y contraseña.",
+			loginError: "Error al iniciar sesión. Por favor, intenta de nuevo.",
 
 			// Register form
 			signUpFormTitle: "Crear Cuenta",

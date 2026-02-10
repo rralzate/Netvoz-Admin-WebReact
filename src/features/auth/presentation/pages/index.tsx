@@ -4,6 +4,7 @@ import Logo from "@/components/logo";
 import SettingButton from "@/core/layouts/components/setting-button";
 import { useUserToken } from "@/features/auth/presentation/hooks/userStore";
 import { GLOBAL_CONFIG } from "@/global-config";
+import backgroundImage from "@/assets/images/background/logo.png";
 import { LoginProvider } from "../hooks/login-provider";
 import LoginForm from "./login-form";
 import MobileForm from "./mobile-form";
@@ -44,9 +45,13 @@ function LoginPage() {
 				</div>
 			</div>
 
-			<div className="relative hidden bg-background-paper lg:block overflow-hidden">
-				<div className="absolute inset-0 h-full w-full bg-gradient-to-br from-primary/20 to-primary/5 dark:from-primary/10 dark:to-transparent" />
-			</div>
+		<div className="relative hidden bg-background-paper lg:block overflow-hidden">
+			<img
+				src={backgroundImage}
+				alt="Netvoz - Todo en un solo lugar"
+				className="absolute inset-0 h-full w-full object-cover"
+			/>
+		</div>
 
 			<div className="absolute right-2 top-0 flex flex-row z-10">
 				<LocalePicker />
