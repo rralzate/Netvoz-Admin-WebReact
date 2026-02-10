@@ -70,7 +70,10 @@ export interface SubscriptionEntity {
 	notas?: string;
 	creadoPor?: string;
 	createdAt?: string;
+	active?: boolean;
 	updatedAt?: string;
+	nit: string;
+	cedula: string
 }
 
 // Respuesta de lista

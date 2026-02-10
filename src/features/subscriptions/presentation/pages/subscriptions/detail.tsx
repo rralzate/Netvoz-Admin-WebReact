@@ -203,8 +203,23 @@ export function SubscriptionDetailPage() {
 			pendiente_pago: "Estado actualizado a pendiente de pago",
 		};
 
+		// Determine if active should be set to false (for suspend or cancel)
+		const shouldDeactivate = newStatus === "suspendida" || newStatus === "cancelada";
+		// Determine if active should be set to true (for reactivation)
+		const shouldActivate = newStatus === "activa";
 
-		const updated = await updateSubscription(subscription.id, { estado: newStatus });
+		const updateData: Partial<SubscriptionEntity> = {
+			estado: newStatus,
+		};
+
+		// Set active field based on status change
+		if (shouldDeactivate) {
+			updateData.active = false;
+		} else if (shouldActivate) {
+			updateData.active = true;
+		}
+
+		const updated = await updateSubscription(subscription.id, updateData);
 		if (updated) {
 			setSubscription(updated);
 			toast.success(statusMessages[newStatus] || "Estado actualizado correctamente");
@@ -214,12 +229,14 @@ export function SubscriptionDetailPage() {
 	};
 
 	// Handle plan change - uses dedicated endpoint PUT /subscriptions/:id/plan
-	const handleChangePlan = async (planId: string, planNombre: string, _precio: number) => {
+	const handleChangePlan = async (planId: string, planNombre: string, precio: number) => {
 		if (!subscription) return;
 
 		const changePlanData = {
 			planId,
 			nombrePlan: planNombre,
+			valorMensual: precio,
+			valorTotal: precio,
 		};
 
 		console.log("handleChangePlan - Sending data:", changePlanData);
@@ -349,6 +366,8 @@ export function SubscriptionDetailPage() {
 			</div>
 		);
 	}
+
+	console.log("suscripcion desde details", subscription)
 
 	const formatPaymentMethod = () => {
 		const { metodoPago } = subscription;

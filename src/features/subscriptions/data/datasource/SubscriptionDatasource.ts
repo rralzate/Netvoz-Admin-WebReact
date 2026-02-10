@@ -11,6 +11,8 @@ import { urls } from "./constants";
 export interface ChangePlanRequest {
 	planId: string;
 	nombrePlan: string;
+	valorMensual?: number;
+	valorTotal?: number;
 }
 
 export interface SubscriptionDatasource {
@@ -121,24 +123,58 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 	}
 
 	async changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity> {
+		// Step 1: Update plan using dedicated endpoint
+		console.log("SubscriptionDatasource.changePlan - Step 1: Update plan");
 		console.log("SubscriptionDatasource.changePlan - URL:", urls.subscriptionChangePlan(id));
-		console.log("SubscriptionDatasource.changePlan - Data:", JSON.stringify(data, null, 2));
+		console.log("SubscriptionDatasource.changePlan - Plan Data:", { planId: data.planId, nombrePlan: data.nombrePlan });
 
-		const response = await APIClient.put<any>({ url: urls.subscriptionChangePlan(id), data });
+		await APIClient.put<any>({
+			url: urls.subscriptionChangePlan(id),
+			data: {
+				planId: data.planId,
+				nombrePlan: data.nombrePlan,
+			},
+		});
 
-		console.log("SubscriptionDatasource.changePlan - Raw Response:", response);
+		// Step 2: Update subscription values (valorMensual, valorTotal) using regular endpoint
+		if (data.valorMensual !== undefined || data.valorTotal !== undefined) {
+			console.log("SubscriptionDatasource.changePlan - Step 2: Update values");
+			console.log("SubscriptionDatasource.changePlan - URL:", urls.subscriptionById(id));
+			console.log("SubscriptionDatasource.changePlan - Values Data:", {
+				valorMensual: data.valorMensual,
+				valorTotal: data.valorTotal,
+			});
 
-		// La API envuelve la respuesta en { data: {...}, status: "success", ... }
-		const subscriptionData = response?.data || response;
+			const response = await APIClient.put<any>({
+				url: urls.subscriptionById(id),
+				data: {
+					valorMensual: data.valorMensual,
+					valorTotal: data.valorTotal,
+				},
+			});
 
-		// Mapear _id a id si es necesario
-		const mapped = {
+			console.log("SubscriptionDatasource.changePlan - Raw Response:", response);
+
+			// La API envuelve la respuesta en { data: {...}, status: "success", ... }
+			const subscriptionData = response?.data || response;
+
+			// Mapear _id a id si es necesario
+			const mapped = {
+				...subscriptionData,
+				id: subscriptionData.id || subscriptionData._id,
+			};
+
+			console.log("SubscriptionDatasource.changePlan - Mapped:", mapped);
+			return mapped;
+		}
+
+		// If no values to update, fetch the updated subscription
+		const getResponse = await APIClient.get<any>({ url: urls.subscriptionById(id) });
+		const subscriptionData = getResponse?.data || getResponse;
+		return {
 			...subscriptionData,
 			id: subscriptionData.id || subscriptionData._id,
 		};
-
-		console.log("SubscriptionDatasource.changePlan - Mapped:", mapped);
-		return mapped;
 	}
 
 	async delete(id: string): Promise<void> {

@@ -150,7 +150,12 @@ export function ModalGenerateInvoice({
 			pdf.text(subscription.nombreNegocio || "Sin nombre", 20, y + 7);
 			pdf.setFontSize(10);
 			pdf.setFont("helvetica", "normal");
-			pdf.text(`ID Negocio: ${subscription.negocioId}`, 20, y + 14);
+			const identificacion = subscription.nit
+				? `NIT: ${subscription.nit}`
+				: subscription.cedula
+					? `Cédula: ${subscription.cedula}`
+					: `ID Negocio: ${subscription.negocioId}`;
+			pdf.text(identificacion, 20, y + 14);
 
 			y += 30;
 
@@ -393,7 +398,9 @@ export function ModalGenerateInvoice({
 							<div className="mb-8">
 								<h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Facturado a:</h3>
 								<p className="font-semibold text-gray-800">{subscription.nombreNegocio}</p>
-								<p className="text-sm text-gray-600">ID Negocio: {subscription.negocioId}</p>
+								<p className="text-sm text-gray-600">
+									{subscription.nit ? `NIT: ${subscription.nit}` : subscription.cedula ? `Cédula: ${subscription.cedula}` : `ID Negocio: ${subscription.negocioId}`}
+								</p>
 							</div>
 
 							{/* Invoice Details */}

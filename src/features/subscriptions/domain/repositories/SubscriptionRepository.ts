@@ -9,6 +9,8 @@ import type {
 export interface ChangePlanRequest {
 	planId: string;
 	nombrePlan: string;
+	valorMensual?: number;
+	valorTotal?: number;
 }
 
 export interface SubscriptionRepository {
