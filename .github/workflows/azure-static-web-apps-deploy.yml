@@ -3,14 +3,12 @@ name: Azure Static Web Apps - Build and Deploy TEST
 on:
   push:
     branches:
-      - master
+      - main
       - test
-      - production
   pull_request:
     branches:
-      - master
+      - main
       - test
-      - production
 
 jobs:
   build_and_deploy:
