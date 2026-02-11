@@ -18,6 +18,7 @@ import { useSubscriptions } from "../../hooks/useSubscriptions";
 import { useBusinessInfo } from "../../hooks/useBusinessInfo";
 import { ModalChangePlan } from "../../components/ModalChangePlan";
 import { ModalGenerateInvoice } from "../../components/ModalGenerateInvoice";
+import { ModalRenewSubscription } from "../../components/ModalRenewSubscription";
 
 const statusColors: Record<SubscriptionEstado, string> = {
 	activa: "bg-green-100 text-green-700 border-green-200",
@@ -137,6 +138,7 @@ export function SubscriptionDetailPage() {
 	const [subscription, setSubscription] = useState<SubscriptionEntity | null>(null);
 	const [isChangePlanModalOpen, setIsChangePlanModalOpen] = useState(false);
 	const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+	const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
 
 	const {
 		subscriptions,
@@ -274,6 +276,27 @@ export function SubscriptionDetailPage() {
 		} catch (error) {
 			console.error("Error sending reminder:", error);
 			toast.error(t("subscriptions.detail.reminderError", "Error al enviar el recordatorio"));
+		}
+	};
+
+	// Handle subscription renewal (update dates and reactivate)
+	const handleRenewSubscription = async (fechaInicio: string, fechaVencimiento: string) => {
+		if (!subscription) return;
+
+		const updateData: Partial<SubscriptionEntity> = {
+			fechaInicio,
+			fechaVencimiento,
+			estado: "activa" as const,
+			active: true,
+		};
+
+		const updated = await updateSubscription(subscription.id, updateData);
+		if (updated) {
+			setSubscription(updated);
+			toast.success("Suscripcion renovada correctamente");
+		} else {
+			toast.error("Error al renovar la suscripcion");
+			throw new Error("Failed to renew subscription");
 		}
 	};
 
@@ -627,6 +650,16 @@ export function SubscriptionDetailPage() {
 						{t("subscriptions.detail.upgradePlan", "Actualizar Plan")}
 					</Button>
 
+					{/* Botón de renovar suscripción */}
+					<Button
+						variant="outline"
+						className="border-green-300 text-green-600 hover:bg-green-50"
+						onClick={() => setIsRenewModalOpen(true)}
+					>
+						<Icon icon="lucide:calendar-check" className="mr-2 h-4 w-4" />
+						Renovar Suscripcion
+					</Button>
+
 					{/* Botones de estado */}
 					{subscription.estado === "activa" && (
 						<Button
@@ -722,6 +755,14 @@ export function SubscriptionDetailPage() {
 			<ModalGenerateInvoice
 				isOpen={isInvoiceModalOpen}
 				onClose={() => setIsInvoiceModalOpen(false)}
+				subscription={subscription}
+			/>
+
+			{/* Modal para renovar suscripción */}
+			<ModalRenewSubscription
+				isOpen={isRenewModalOpen}
+				onClose={() => setIsRenewModalOpen(false)}
+				onConfirm={handleRenewSubscription}
 				subscription={subscription}
 			/>
 		</div>
