@@ -11,6 +11,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/core/ui/dialog";
+import { Input } from "@/core/ui/input";
+import { Label } from "@/core/ui/label";
 import { cn } from "@/core/utils";
 import type { PlanEntity } from "@/features/plans/domain/entities/PlanEntity";
 import type { SubscriptionEntity } from "../../domain/entities/SubscriptionEntity";
@@ -18,7 +20,7 @@ import type { SubscriptionEntity } from "../../domain/entities/SubscriptionEntit
 interface ModalChangePlanProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onConfirm: (planId: string, planNombre: string, precio: number) => Promise<void>;
+	onConfirm: (planId: string, planNombre: string, precio: number, meses: number, monto: number) => Promise<void>;
 	subscription: SubscriptionEntity;
 	plans: PlanEntity[];
 	isLoading?: boolean;
@@ -43,12 +45,15 @@ export function ModalChangePlan({
 }: ModalChangePlanProps) {
 	const { t } = useTranslation();
 	const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+	const [meses, setMeses] = useState<number>(1);
+	const [monto, setMonto] = useState<number>(0);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-  console.log("plan", subscription, plans)
+
 	// Pre-select current plan when modal opens
 	useEffect(() => {
 		if (isOpen && subscription.planId) {
 			setSelectedPlanId(subscription.planId);
+			setMeses(1);
 		}
 	}, [isOpen, subscription.planId]);
 
@@ -57,24 +62,28 @@ export function ModalChangePlan({
 
 	const selectedPlan = activePlans.find((p) => p.id === selectedPlanId);
 
+	// Recalculate amount when selected plan or months change
+	useEffect(() => {
+		if (selectedPlan) {
+			setMonto((selectedPlan.precio ?? 0) * meses);
+		}
+	}, [selectedPlanId, meses, selectedPlan]);
+
 	const handleConfirm = async () => {
 		if (!selectedPlan) return;
-
-		console.log("ModalChangePlan - Selected plan:", selectedPlan);
-		console.log("ModalChangePlan - Sending to onConfirm:", {
-			planId: selectedPlan.id,
-			planNombre: selectedPlan.nombre || "Plan",
-			precio: selectedPlan.precio ?? 0,
-		});
 
 		setIsSubmitting(true);
 		try {
 			await onConfirm(
 				selectedPlan.id,
 				selectedPlan.nombre || "Plan",
-				selectedPlan.precio ?? 0
+				selectedPlan.precio ?? 0,
+				meses,
+				monto
 			);
 			setSelectedPlanId(null);
+			setMeses(1);
+			setMonto(0);
 			onClose();
 		} catch (error) {
 			console.error("Error changing plan:", error);
@@ -85,6 +94,8 @@ export function ModalChangePlan({
 
 	const handleClose = () => {
 		setSelectedPlanId(null);
+		setMeses(1);
+		setMonto(0);
 		onClose();
 	};
 
@@ -266,6 +277,66 @@ export function ModalChangePlan({
 								Este es tu plan actual. Puedes confirmar para mantenerlo.
 							</p>
 						)}
+					</div>
+				)}
+
+				{/* Month selection and total */}
+				{selectedPlan && (
+					<div className="space-y-4 mt-4">
+						<div className="space-y-2">
+							<Label>Periodo de suscripcion</Label>
+							<div className="grid grid-cols-2 gap-3">
+								<button
+									type="button"
+									onClick={() => setMeses(1)}
+									className={`flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all ${
+										meses === 1
+											? "border-primary bg-primary/5"
+											: "border-muted hover:border-muted-foreground/30"
+									}`}
+								>
+									<span className="text-xl font-bold">1</span>
+									<span className="text-sm text-muted-foreground">Mes</span>
+								</button>
+								<button
+									type="button"
+									onClick={() => setMeses(12)}
+									className={`flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all ${
+										meses === 12
+											? "border-primary bg-primary/5"
+											: "border-muted hover:border-muted-foreground/30"
+									}`}
+								>
+									<span className="text-xl font-bold">12</span>
+									<span className="text-sm text-muted-foreground">Meses</span>
+								</button>
+							</div>
+						</div>
+
+						<div className="bg-muted/50 rounded-lg p-4 space-y-2">
+							<div className="flex justify-between text-sm">
+								<span className="text-muted-foreground">Valor mensual:</span>
+								<span className="font-medium">{formatCurrency(selectedPlan.precio, selectedPlan.moneda)}</span>
+							</div>
+							<div className="flex justify-between text-sm">
+								<span className="text-muted-foreground">Meses:</span>
+								<span className="font-medium">{meses}</span>
+							</div>
+							<div className="flex justify-between items-center text-sm border-t pt-2">
+								<Label htmlFor="monto-plan" className="font-medium">Total a cobrar:</Label>
+								<div className="flex items-center gap-1">
+									<span className="text-primary font-bold">$</span>
+									<Input
+										id="monto-plan"
+										type="number"
+										min={0}
+										value={monto}
+										onChange={(e) => setMonto(Number(e.target.value))}
+										className="w-28 h-8 text-right font-bold text-primary"
+									/>
+								</div>
+							</div>
+						</div>
 					</div>
 				)}
 

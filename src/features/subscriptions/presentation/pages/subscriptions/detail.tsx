@@ -144,6 +144,7 @@ export function SubscriptionDetailPage() {
 		subscriptions,
 		findSubscriptionById,
 		updateSubscription,
+		renewSubscription,
 		changePlan,
 		loadSubscriptions,
 		isLoading,
@@ -231,14 +232,14 @@ export function SubscriptionDetailPage() {
 	};
 
 	// Handle plan change - uses dedicated endpoint PUT /subscriptions/:id/plan
-	const handleChangePlan = async (planId: string, planNombre: string, precio: number) => {
+	const handleChangePlan = async (planId: string, planNombre: string, precio: number, meses: number, monto: number) => {
 		if (!subscription) return;
 
 		const changePlanData = {
 			planId,
 			nombrePlan: planNombre,
 			valorMensual: precio,
-			valorTotal: precio,
+			valorTotal: monto,
 		};
 
 		console.log("handleChangePlan - Sending data:", changePlanData);
@@ -280,7 +281,7 @@ export function SubscriptionDetailPage() {
 	};
 
 	// Handle subscription renewal (update dates and reactivate)
-	const handleRenewSubscription = async (fechaInicio: string, fechaVencimiento: string) => {
+	const handleRenewSubscription = async (fechaInicio: string, fechaVencimiento: string, meses: number, monto: number) => {
 		if (!subscription) return;
 
 		const updateData: Partial<SubscriptionEntity> = {
@@ -288,9 +289,20 @@ export function SubscriptionDetailPage() {
 			fechaVencimiento,
 			estado: "activa" as const,
 			active: true,
+			valorTotal: monto,
 		};
 
-		const updated = await updateSubscription(subscription.id, updateData);
+		 await updateSubscription(subscription.id, updateData);
+
+		const updated = await renewSubscription(subscription.id, {
+			meses,
+			pago: {
+				monto,
+				metodoPago: subscription.metodoPago?.tipo ?? "efectivo",
+				transaccionId: `REN-${Date.now()}`,
+			},
+		});
+
 		if (updated) {
 			setSubscription(updated);
 			toast.success("Suscripcion renovada correctamente");

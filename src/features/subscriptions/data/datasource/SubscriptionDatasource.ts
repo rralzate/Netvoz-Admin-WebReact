@@ -6,6 +6,7 @@ import type {
 	SubscriptionCreateRequest,
 	SubscriptionUpdateRequest,
 } from "../../domain/entities/SubscriptionEntity";
+import type { SubscriptionRenew } from "../../domain/entities/suscriptionRenew";
 import { urls } from "./constants";
 
 export interface ChangePlanRequest {
@@ -21,6 +22,7 @@ export interface SubscriptionDatasource {
 	create(data: SubscriptionCreateRequest): Promise<SubscriptionEntity>;
 	update(id: string, data: SubscriptionUpdateRequest): Promise<SubscriptionEntity>;
 	changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity>;
+	renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity>;
 	delete(id: string): Promise<void>;
 }
 
@@ -171,6 +173,15 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 		// If no values to update, fetch the updated subscription
 		const getResponse = await APIClient.get<any>({ url: urls.subscriptionById(id) });
 		const subscriptionData = getResponse?.data || getResponse;
+		return {
+			...subscriptionData,
+			id: subscriptionData.id || subscriptionData._id,
+		};
+	}
+
+	async renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity> {
+		const response = await APIClient.post<any>({ url: urls.suscriptionRenew(id), data });
+		const subscriptionData = response?.data || response;
 		return {
 			...subscriptionData,
 			id: subscriptionData.id || subscriptionData._id,

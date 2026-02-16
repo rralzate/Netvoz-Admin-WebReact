@@ -17,7 +17,7 @@ import type { SubscriptionEntity } from "../../domain/entities/SubscriptionEntit
 interface ModalRenewSubscriptionProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onConfirm: (fechaInicio: string, fechaVencimiento: string) => Promise<void>;
+	onConfirm: (fechaInicio: string, fechaVencimiento: string, meses: number, monto: number) => Promise<void>;
 	subscription: SubscriptionEntity;
 }
 
@@ -52,7 +52,15 @@ export function ModalRenewSubscription({
 	const { t } = useTranslation();
 	const [fechaInicio, setFechaInicio] = useState("");
 	const [fechaVencimiento, setFechaVencimiento] = useState("");
+	const [meses, setMeses] = useState<number>(1);
+	const [monto, setMonto] = useState<number>(0);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	// Recalculate amount when months or modal state change
+	useEffect(() => {
+		const valorBase = subscription.valorMensual ?? subscription.valorTotal ?? 0;
+		setMonto(valorBase * meses);
+	}, [isOpen, meses, subscription.valorMensual, subscription.valorTotal]);
 
 	// Set default dates when modal opens: start = current expiration, end = +1 month from expiration
 	useEffect(() => {
@@ -71,7 +79,7 @@ export function ModalRenewSubscription({
 
 		setIsSubmitting(true);
 		try {
-			await onConfirm(fechaInicio, fechaVencimiento);
+			await onConfirm(fechaInicio, fechaVencimiento, meses, monto);
 			onClose();
 		} catch (error) {
 			console.error("Error renewing subscription:", error);
@@ -83,6 +91,8 @@ export function ModalRenewSubscription({
 	const handleClose = () => {
 		setFechaInicio("");
 		setFechaVencimiento("");
+		setMeses(1);
+		setMonto(0);
 		onClose();
 	};
 
@@ -121,6 +131,63 @@ export function ModalRenewSubscription({
 						<span className="font-medium">
 							{formatDisplayDate(subscription.fechaVencimiento)}
 						</span>
+					</div>
+				</div>
+
+				{/* Month selection */}
+				<div className="space-y-2 mt-2">
+					<Label>Periodo de renovacion</Label>
+					<div className="grid grid-cols-2 gap-3">
+						<button
+							type="button"
+							onClick={() => setMeses(1)}
+							className={`flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all ${
+								meses === 1
+									? "border-green-600 bg-green-50 dark:bg-green-950"
+									: "border-muted hover:border-muted-foreground/30"
+							}`}
+						>
+							<span className="text-xl font-bold">1</span>
+							<span className="text-sm text-muted-foreground">Mes</span>
+						</button>
+						<button
+							type="button"
+							onClick={() => setMeses(12)}
+							className={`flex flex-col items-center justify-center rounded-lg border-2 p-3 transition-all ${
+								meses === 12
+									? "border-green-600 bg-green-50 dark:bg-green-950"
+									: "border-muted hover:border-muted-foreground/30"
+							}`}
+						>
+							<span className="text-xl font-bold">12</span>
+							<span className="text-sm text-muted-foreground">Meses</span>
+						</button>
+					</div>
+				</div>
+
+				{/* Renewal cost summary */}
+				<div className="bg-muted/50 rounded-lg p-4 space-y-2">
+					<div className="flex justify-between text-sm">
+						<span className="text-muted-foreground">Valor mensual:</span>
+						<span className="font-medium">${(subscription.valorMensual ?? subscription.valorTotal ?? 0).toLocaleString()}</span>
+					</div>
+					<div className="flex justify-between text-sm">
+						<span className="text-muted-foreground">Meses:</span>
+						<span className="font-medium">{meses}</span>
+					</div>
+					<div className="flex justify-between items-center text-sm border-t pt-2">
+						<Label htmlFor="monto" className="font-medium">Total a cobrar:</Label>
+						<div className="flex items-center gap-1">
+							<span className="text-green-600 font-bold">$</span>
+							<Input
+								id="monto"
+								type="number"
+								min={0}
+								value={monto}
+								onChange={(e) => setMonto(Number(e.target.value))}
+								className="w-28 h-8 text-right font-bold text-green-600"
+							/>
+						</div>
 					</div>
 				</div>
 
