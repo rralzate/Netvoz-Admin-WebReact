@@ -21,6 +21,7 @@ export interface PlanEntity {
 	moneda: PlanMoneda;
 	duracionMeses: number;
 	caracteristicas: PlanCaracteristicas;
+	porcentajeDescuento?: number;
 	activo: boolean;
 	popular?: boolean;
 	createdAt?: Date;
@@ -40,6 +41,7 @@ export interface PlanCreateRequest {
 	moneda: PlanMoneda;
 	duracionMeses: number;
 	caracteristicas: PlanCaracteristicas;
+	porcentajeDescuento?: number;
 	activo?: boolean;
 	popular?: boolean;
 }
