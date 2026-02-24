@@ -2,6 +2,7 @@ import APIClient from "@/core/api/apiClient";
 import type {
 	SubscriptionEntity,
 	SubscriptionListResponse,
+	SubscriptionTransactionListResponse,
 	SubscriptionEstado,
 	SubscriptionCreateRequest,
 	SubscriptionUpdateRequest,
@@ -24,6 +25,10 @@ export interface SubscriptionDatasource {
 	changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity>;
 	renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity>;
 	delete(id: string): Promise<void>;
+	getTransactionsByBusiness(
+		negocioId: string,
+		params?: { page?: number; limit?: number }
+	): Promise<SubscriptionTransactionListResponse>;
 }
 
 export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
@@ -190,5 +195,27 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 
 	async delete(id: string): Promise<void> {
 		await APIClient.delete<void>({ url: urls.subscriptionById(id) });
+	}
+
+	async getTransactionsByBusiness(
+		negocioId: string,
+		params?: { page?: number; limit?: number }
+	): Promise<SubscriptionTransactionListResponse> {
+		const page = params?.page != null ? params.page : 1;
+		const limit = params?.limit != null ? params.limit : 10;
+		const url = urls.transactionsByBusiness(negocioId);
+		const response = await APIClient.get<any>({
+			url,
+			config: { params: { page, limit } },
+		});
+		// El interceptor de Axios ya extrae response.data, así que `response`
+		// es directamente el body: { data: [...], total, page, limit, totalPages }
+		return {
+			data: Array.isArray(response?.data) ? response.data : [],
+			total: response?.total ?? 0,
+			page: response?.page ?? page,
+			limit: response?.limit ?? limit,
+			totalPages: response?.totalPages ?? 0,
+		};
 	}
 }

@@ -7,5 +7,8 @@ export const urls = {
 	sendReminderEmail: "/auth/send-reminder-email",
 
 	// renew suscription
-	suscriptionRenew: (id: string) => `/subscriptions/${id}/renew`
+	suscriptionRenew: (id: string) => `/subscriptions/${id}/renew`,
+
+	// ePayco: transacciones por negocio (mismo backend)
+	transactionsByBusiness: (negocioId: string) => `/epayco/transactions/by-business/${negocioId}`,
 };

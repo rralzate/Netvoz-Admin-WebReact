@@ -84,6 +84,34 @@ export interface SubscriptionListResponse {
 	pageSize: number;
 }
 
+// Transacción ePayco (respuesta GET /epayco/transactions/by-business/:negocioId)
+export interface SubscriptionTransactionEntity {
+	id: string;
+	negocioId: string;
+	referencia: string;
+	descripcion: string;
+	valor: number;
+	moneda: string;
+	estado: string;
+	metodoPago: string;
+	transaccionId?: string;
+	clienteNombre?: string;
+	clienteEmail?: string;
+	subscriptionId?: string;
+	planId?: string;
+	planName?: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
+
+export interface SubscriptionTransactionListResponse {
+	data: SubscriptionTransactionEntity[];
+	total: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}
+
 // Helpers para la entidad (funciones de utilidad)
 export const SubscriptionHelpers = {
 	estaActiva(subscription: SubscriptionEntity): boolean {
