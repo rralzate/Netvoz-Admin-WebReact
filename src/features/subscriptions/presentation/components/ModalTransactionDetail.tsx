@@ -11,6 +11,7 @@ import {
 } from "@/core/ui/dialog";
 import { cn } from "@/core/utils";
 import type { SubscriptionTransactionEntity } from "../../domain/entities/SubscriptionEntity";
+import { ScrollArea } from "@/core/ui/scroll-area";
 
 interface ModalTransactionDetailProps {
 	isOpen: boolean;
@@ -71,6 +72,8 @@ export function ModalTransactionDetail({
 
 	const isApproved = transaction.estado === "aprobada";
 
+	const billingPeriodLabel = transaction.billingPeriod === "annual" ? "Anual" : transaction.billingPeriod === "monthly" ? "Mensual" : transaction.billingPeriod;
+
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
 			<DialogContent className="max-w-lg">
@@ -87,6 +90,7 @@ export function ModalTransactionDetail({
 					</DialogDescription>
 				</DialogHeader>
 
+				<ScrollArea className="max-h-[70vh] pr-1">
 				<div className="space-y-4 py-2">
 					{/* Estado destacado */}
 					<div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
@@ -107,13 +111,69 @@ export function ModalTransactionDetail({
 						</Badge>
 					</div>
 
-					{/* Monto */}
+					{/* Monto total */}
 					<div className="flex items-center justify-between rounded-lg bg-primary/5 px-4 py-3">
-						<span className="text-sm text-muted-foreground">Valor</span>
+						<span className="text-sm text-muted-foreground">Valor Total Pagado</span>
 						<span className="text-xl font-bold text-primary">
 							{formatCurrency(transaction.valor, transaction.moneda)} {transaction.moneda}
 						</span>
 					</div>
+
+					{/* Descuento anual */}
+					{transaction.descuentoAnual && (
+						<div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3 space-y-2">
+							<p className="text-xs font-semibold uppercase tracking-wider text-green-700 flex items-center gap-1.5">
+								<Icon icon="lucide:tag" className="h-3.5 w-3.5" />
+								Descuento Aplicado
+							</p>
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-green-700">{transaction.descuentoAnual.descripcion}</span>
+								<Badge className="bg-green-100 text-green-700 border-green-300 font-semibold">
+									{transaction.descuentoAnual.porcentaje}% OFF
+								</Badge>
+							</div>
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-green-600">Ahorro total</span>
+								<span className="text-sm font-bold text-green-700">
+									- {formatCurrency(transaction.descuentoAnual.totalDescuento, transaction.moneda)}
+								</span>
+							</div>
+						</div>
+					)}
+
+					{/* Prorrateo */}
+					{transaction.prorrateo?.aplicaProrrateo && (
+						<div className="rounded-lg bg-blue-50 border border-blue-200 px-4 py-3 space-y-1">
+							<p className="text-xs font-semibold uppercase tracking-wider text-blue-700 flex items-center gap-1.5 mb-2">
+								<Icon icon="lucide:calendar-days" className="h-3.5 w-3.5" />
+								Prorrateo
+							</p>
+							<div className="flex justify-between">
+								<span className="text-sm text-blue-700">Precio plan sin descuento</span>
+								<span className="text-sm font-medium text-blue-900">
+									{formatCurrency(transaction.prorrateo.precioPlanSinDescuento, transaction.moneda)}
+								</span>
+							</div>
+							<div className="flex justify-between">
+								<span className="text-sm text-blue-700">Días restantes del período</span>
+								<span className="text-sm font-medium text-blue-900">{transaction.prorrateo.diasRestantes} días</span>
+							</div>
+							{transaction.prorrateo.creditoDiasNoUsados > 0 && (
+								<div className="flex justify-between">
+									<span className="text-sm text-blue-700">Crédito días no usados</span>
+									<span className="text-sm font-medium text-green-700">
+										- {formatCurrency(transaction.prorrateo.creditoDiasNoUsados, transaction.moneda)}
+									</span>
+								</div>
+							)}
+							<div className="flex justify-between border-t border-blue-200 pt-1 mt-1">
+								<span className="text-sm font-semibold text-blue-800">Total a pagar</span>
+								<span className="text-sm font-bold text-blue-900">
+									{formatCurrency(transaction.prorrateo.totalAPagar, transaction.moneda)}
+								</span>
+							</div>
+						</div>
+					)}
 
 					{/* Información de la transacción */}
 					<div>
@@ -140,6 +200,13 @@ export function ModalTransactionDetail({
 								icon="lucide:package"
 								value={transaction.planName}
 							/>
+							{transaction.billingPeriod && (
+								<DetailRow
+									label="Período de facturación"
+									icon="lucide:calendar-range"
+									value={billingPeriodLabel}
+								/>
+							)}
 							<DetailRow
 								label="Descripción"
 								icon="lucide:file-text"
@@ -147,6 +214,27 @@ export function ModalTransactionDetail({
 							/>
 						</div>
 					</div>
+
+					{/* Período de la suscripción */}
+					{(transaction.periodoFechaInicio || transaction.periodoFechaFin) && (
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+								Período Cubierto
+							</p>
+							<div className="rounded-lg border px-4">
+								<DetailRow
+									label="Inicio del período"
+									icon="lucide:calendar"
+									value={formatDate(transaction.periodoFechaInicio)}
+								/>
+								<DetailRow
+									label="Fin del período"
+									icon="lucide:calendar-x"
+									value={formatDate(transaction.periodoFechaFin)}
+								/>
+							</div>
+						</div>
+					)}
 
 					{/* Información del cliente */}
 					<div>
@@ -205,6 +293,7 @@ export function ModalTransactionDetail({
 						</div>
 					</div>
 				</div>
+				</ScrollArea>
 
 				<DialogFooter>
 					<Button variant="outline" onClick={onClose}>

@@ -84,6 +84,22 @@ export interface SubscriptionListResponse {
 	pageSize: number;
 }
 
+// Prorrateo aplicado a una transacción
+export interface SubscriptionTransactionProrrateo {
+	aplicaProrrateo: boolean;
+	diasRestantes: number;
+	creditoDiasNoUsados: number;
+	precioPlanSinDescuento: number;
+	totalAPagar: number;
+}
+
+// Descuento anual aplicado a una transacción
+export interface SubscriptionTransactionDescuentoAnual {
+	porcentaje: number;
+	totalDescuento: number;
+	descripcion: string;
+}
+
 // Transacción ePayco (respuesta GET /epayco/transactions/by-business/:negocioId)
 export interface SubscriptionTransactionEntity {
 	id: string;
@@ -100,6 +116,11 @@ export interface SubscriptionTransactionEntity {
 	subscriptionId?: string;
 	planId?: string;
 	planName?: string;
+	billingPeriod?: string;
+	periodoFechaInicio?: string;
+	periodoFechaFin?: string;
+	prorrateo?: SubscriptionTransactionProrrateo;
+	descuentoAnual?: SubscriptionTransactionDescuentoAnual;
 	createdAt?: string;
 	updatedAt?: string;
 }

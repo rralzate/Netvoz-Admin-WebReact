@@ -677,6 +677,7 @@ export function SubscriptionDetailPage() {
 										<th className="text-left p-3 font-medium text-muted-foreground text-sm">DESCRIPCIÓN</th>
 										<th className="text-left p-3 font-medium text-muted-foreground text-sm">PLAN</th>
 										<th className="text-right p-3 font-medium text-muted-foreground text-sm">VALOR</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">DESCUENTOS</th>
 										<th className="text-left p-3 font-medium text-muted-foreground text-sm">ESTADO</th>
 										<th className="text-left p-3 font-medium text-muted-foreground text-sm">MÉTODO</th>
 									</tr>
@@ -700,6 +701,33 @@ export function SubscriptionDetailPage() {
 											<td className="p-3 text-sm">{tx.planName || "-"}</td>
 											<td className="p-3 text-sm text-right font-medium">
 												{formatCurrency(tx.valor, (tx.moneda as SubscriptionMoneda) || "COP")}
+											</td>
+											<td className="p-3">
+												<div className="flex flex-wrap gap-1">
+													{tx.descuentoAnual && (
+														<Badge
+															variant="outline"
+															className="text-xs bg-green-100 text-green-700 border-green-200 cursor-pointer"
+															onClick={() => setSelectedTransaction(tx)}
+														>
+															<Icon icon="lucide:tag" className="mr-1 h-3 w-3" />
+															{tx.descuentoAnual.porcentaje}% OFF
+														</Badge>
+													)}
+													{tx.prorrateo?.aplicaProrrateo && (
+														<Badge
+															variant="outline"
+															className="text-xs bg-blue-100 text-blue-700 border-blue-200 cursor-pointer"
+															onClick={() => setSelectedTransaction(tx)}
+														>
+															<Icon icon="lucide:calendar-days" className="mr-1 h-3 w-3" />
+															Prorrateo
+														</Badge>
+													)}
+													{!tx.descuentoAnual && !tx.prorrateo?.aplicaProrrateo && (
+														<span className="text-muted-foreground text-sm">-</span>
+													)}
+												</div>
 											</td>
 											<td className="p-3">
 												<Badge
