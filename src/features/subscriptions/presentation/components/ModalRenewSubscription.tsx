@@ -62,17 +62,18 @@ export function ModalRenewSubscription({
 		setMonto(valorBase * meses);
 	}, [isOpen, meses, subscription.valorMensual, subscription.valorTotal]);
 
-	// Set default dates when modal opens: start = current expiration, end = +1 month from expiration
+	// Recalculate dates whenever modal opens or meses changes
+	// fechaInicio = current subscription expiration, fechaFin = fechaInicio + meses
 	useEffect(() => {
 		if (isOpen && subscription.fechaVencimiento) {
 			const startDate = new Date(subscription.fechaVencimiento);
 			const endDate = new Date(subscription.fechaVencimiento);
-			endDate.setMonth(endDate.getMonth() + 1);
+			endDate.setMonth(endDate.getMonth() + meses);
 
 			setFechaInicio(startDate.toISOString().split("T")[0]);
 			setFechaVencimiento(endDate.toISOString().split("T")[0]);
 		}
-	}, [isOpen, subscription.fechaVencimiento]);
+	}, [isOpen, meses, subscription.fechaVencimiento]);
 
 	const handleConfirm = async () => {
 		if (!fechaInicio || !fechaVencimiento) return;

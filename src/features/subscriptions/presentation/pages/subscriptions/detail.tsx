@@ -297,27 +297,25 @@ export function SubscriptionDetailPage() {
 		}
 	};
 
-	// Handle subscription renewal (update dates and reactivate)
+	// Handle subscription renewal
 	const handleRenewSubscription = async (fechaInicio: string, fechaVencimiento: string, meses: number, monto: number) => {
 		if (!subscription) return;
 
-		const updateData: Partial<SubscriptionEntity> = {
-			fechaInicio,
-			fechaVencimiento,
-			estado: "activa" as const,
-			active: true,
-			valorTotal: monto,
-		};
-
-		 await updateSubscription(subscription.id, updateData);
-
 		const updated = await renewSubscription(subscription.id, {
 			meses,
+			fechaInicio: new Date(fechaInicio).toISOString(),
+			fechaVencimiento: new Date(fechaVencimiento).toISOString(),
+			valorTotal: monto,
+			valorMensual: subscription.valorMensual ?? monto,
 			pago: {
 				monto,
-				metodoPago: subscription.metodoPago?.tipo ?? "efectivo",
-				transaccionId: `REN-${Date.now()}`,
+				metodoPago: {
+					tipo: "manual",
+					ultimosCuatroDigitos: "",
+					proveedor: "manual",
+				},
 			},
+			notas: "Renovación manual",
 		});
 
 		if (updated) {

@@ -1,10 +1,20 @@
-export interface Payment {
+export interface RenewPaymentMetodo {
+	tipo: string;
+	ultimosCuatroDigitos?: string;
+	proveedor?: string;
+}
+
+export interface RenewPayment {
 	monto: number;
-	metodoPago: string;
-	transaccionId: string;
+	metodoPago: RenewPaymentMetodo;
 }
 
 export interface SubscriptionRenew {
 	meses: number;
-	pago: Payment;
+	fechaInicio: string;
+	fechaVencimiento: string;
+	valorTotal: number;
+	valorMensual: number;
+	pago: RenewPayment;
+	notas?: string;
 }
