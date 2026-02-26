@@ -249,7 +249,7 @@ export function SubscriptionDetailPage() {
 	};
 
 	// Handle plan change - uses dedicated endpoint PUT /subscriptions/:id/plan
-	const handleChangePlan = async (planId: string, planNombre: string, precio: number, meses: number, monto: number) => {
+	const handleChangePlan = async (planId: string, planNombre: string, precio: number, _meses: number, monto: number) => {
 		if (!subscription) return;
 
 		const changePlanData = {

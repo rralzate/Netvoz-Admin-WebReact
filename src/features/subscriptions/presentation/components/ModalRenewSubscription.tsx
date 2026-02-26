@@ -21,14 +21,6 @@ interface ModalRenewSubscriptionProps {
 	subscription: SubscriptionEntity;
 }
 
-function formatDateForInput(dateString: string | undefined | null): string {
-	if (!dateString) return "";
-	try {
-		return new Date(dateString).toISOString().split("T")[0];
-	} catch {
-		return "";
-	}
-}
 
 function formatDisplayDate(dateString: string | undefined | null): string {
 	if (!dateString) return "No especificado";
