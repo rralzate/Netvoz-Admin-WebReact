@@ -8,6 +8,7 @@ import {
 	UpdateSubscriptionUseCaseImpl,
 	DeleteSubscriptionUseCaseImpl,
 	ChangePlanUseCaseImpl,
+	RenewSubscriptionUseCaseImpl,
 } from "../domain/usecases";
 
 export const SUBSCRIPTION_TOKENS = {
@@ -19,6 +20,7 @@ export const SUBSCRIPTION_TOKENS = {
 	UpdateSubscriptionUseCase: Symbol.for("UpdateSubscriptionUseCase"),
 	DeleteSubscriptionUseCase: Symbol.for("DeleteSubscriptionUseCase"),
 	ChangePlanUseCase: Symbol.for("ChangePlanUseCase"),
+	RenewSubscriptionUseCase: Symbol.for("RenewSubscriptionUseCase"),
 } as const;
 
 export function subscriptionsConfigureContainer(): void {
@@ -52,6 +54,10 @@ export function subscriptionsConfigureContainer(): void {
 	]);
 
 	container.registerClass(SUBSCRIPTION_TOKENS.ChangePlanUseCase, ChangePlanUseCaseImpl, [
+		SUBSCRIPTION_TOKENS.SubscriptionRepository,
+	]);
+
+	container.registerClass(SUBSCRIPTION_TOKENS.RenewSubscriptionUseCase, RenewSubscriptionUseCaseImpl, [
 		SUBSCRIPTION_TOKENS.SubscriptionRepository,
 	]);
 }

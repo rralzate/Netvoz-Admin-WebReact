@@ -8,6 +8,7 @@ import type {
 	UpdateSubscriptionUseCase,
 	DeleteSubscriptionUseCase,
 	ChangePlanUseCase,
+	RenewSubscriptionUseCase,
 } from "../../domain/usecases";
 import type { ChangePlanRequest } from "../../domain/repositories/SubscriptionRepository";
 import type {
@@ -16,6 +17,7 @@ import type {
 	SubscriptionCreateRequest,
 	SubscriptionUpdateRequest,
 } from "../../domain/entities/SubscriptionEntity";
+import type { SubscriptionRenew } from "../../domain/entities/suscriptionRenew";
 import { SubscriptionHelpers } from "../../domain/entities/SubscriptionEntity";
 
 // State interface
@@ -51,6 +53,7 @@ export interface UseSubscriptionsReturn {
 	createSubscription: (data: SubscriptionCreateRequest) => Promise<SubscriptionEntity | null>;
 	updateSubscription: (id: string, data: SubscriptionUpdateRequest) => Promise<SubscriptionEntity | null>;
 	changePlan: (id: string, data: ChangePlanRequest) => Promise<SubscriptionEntity | null>;
+	renewSubscription: (id: string, data: SubscriptionRenew) => Promise<SubscriptionEntity | null>;
 	deleteSubscription: (id: string) => Promise<boolean>;
 
 	// Helpers
@@ -284,6 +287,44 @@ export const useSubscriptions = (): UseSubscriptionsReturn => {
 		[t, setLoading, setError, applyFilters]
 	);
 
+	// Renew subscription
+	const renewSubscription = useCallback(
+		async (id: string, data: SubscriptionRenew): Promise<SubscriptionEntity | null> => {
+			try {
+				setLoading(true);
+				setError(null);
+
+				const useCase = container.get<RenewSubscriptionUseCase>(SUBSCRIPTION_TOKENS.RenewSubscriptionUseCase);
+				const updatedSubscription = await useCase.execute(id, data);
+
+				setState((prev) => {
+					const updatedSubscriptions = prev.subscriptions.map((sub) =>
+						sub.id === id ? updatedSubscription : sub
+					);
+					return {
+						...prev,
+						subscriptions: updatedSubscriptions,
+						filteredSubscriptions: applyFilters(updatedSubscriptions, prev.searchTerm, prev.filterEstado),
+						selectedSubscription:
+							prev.selectedSubscription?.id === id ? updatedSubscription : prev.selectedSubscription,
+						isLoading: false,
+					};
+				});
+
+				return updatedSubscription;
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: t("subscriptions.errors.renew", "Error al renovar la suscripción");
+				setError(errorMessage);
+				setLoading(false);
+				return null;
+			}
+		},
+		[t, setLoading, setError, applyFilters]
+	);
+
 	// Delete subscription
 	const deleteSubscription = useCallback(
 		async (id: string): Promise<boolean> => {
@@ -419,6 +460,7 @@ export const useSubscriptions = (): UseSubscriptionsReturn => {
 		createSubscription,
 		updateSubscription,
 		changePlan,
+		renewSubscription,
 		deleteSubscription,
 
 		// Helpers

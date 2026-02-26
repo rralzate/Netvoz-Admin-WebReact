@@ -16,8 +16,12 @@ import type {
 } from "../../../domain/entities/SubscriptionEntity";
 import { useSubscriptions } from "../../hooks/useSubscriptions";
 import { useBusinessInfo } from "../../hooks/useBusinessInfo";
+import { useSubscriptionTransactions } from "../../hooks/useSubscriptionTransactions";
 import { ModalChangePlan } from "../../components/ModalChangePlan";
 import { ModalGenerateInvoice } from "../../components/ModalGenerateInvoice";
+import { ModalRenewSubscription } from "../../components/ModalRenewSubscription";
+import { ModalTransactionDetail } from "../../components/ModalTransactionDetail";
+import type { SubscriptionTransactionEntity } from "../../../domain/entities/SubscriptionEntity";
 
 const statusColors: Record<SubscriptionEstado, string> = {
 	activa: "bg-green-100 text-green-700 border-green-200",
@@ -137,11 +141,14 @@ export function SubscriptionDetailPage() {
 	const [subscription, setSubscription] = useState<SubscriptionEntity | null>(null);
 	const [isChangePlanModalOpen, setIsChangePlanModalOpen] = useState(false);
 	const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+	const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+	const [selectedTransaction, setSelectedTransaction] = useState<SubscriptionTransactionEntity | null>(null);
 
 	const {
 		subscriptions,
 		findSubscriptionById,
 		updateSubscription,
+		renewSubscription,
 		changePlan,
 		loadSubscriptions,
 		isLoading,
@@ -159,6 +166,19 @@ export function SubscriptionDetailPage() {
 		sendReminderEmail,
 		isSendingReminder,
 	} = useBusinessInfo();
+
+	// Historial de transacciones del negocio (endpoint por negocioId)
+	const {
+		transactions,
+		total: transactionsTotal,
+		page: transactionsPage,
+		limit: transactionsLimit,
+		totalPages: transactionsTotalPages,
+		isLoading: isLoadingTransactions,
+		error: transactionsError,
+		loadTransactions,
+		setPage: setTransactionsPage,
+	} = useSubscriptionTransactions(subscription?.negocioId, { limit: 10, enabled: !!subscription?.negocioId });
 
 	// Find subscription from loaded list when subscriptions change or id changes
 	useEffect(() => {
@@ -229,14 +249,14 @@ export function SubscriptionDetailPage() {
 	};
 
 	// Handle plan change - uses dedicated endpoint PUT /subscriptions/:id/plan
-	const handleChangePlan = async (planId: string, planNombre: string, precio: number) => {
+	const handleChangePlan = async (planId: string, planNombre: string, precio: number, meses: number, monto: number) => {
 		if (!subscription) return;
 
 		const changePlanData = {
 			planId,
 			nombrePlan: planNombre,
 			valorMensual: precio,
-			valorTotal: precio,
+			valorTotal: monto,
 		};
 
 		console.log("handleChangePlan - Sending data:", changePlanData);
@@ -274,6 +294,36 @@ export function SubscriptionDetailPage() {
 		} catch (error) {
 			console.error("Error sending reminder:", error);
 			toast.error(t("subscriptions.detail.reminderError", "Error al enviar el recordatorio"));
+		}
+	};
+
+	// Handle subscription renewal
+	const handleRenewSubscription = async (fechaInicio: string, fechaVencimiento: string, meses: number, monto: number) => {
+		if (!subscription) return;
+
+		const updated = await renewSubscription(subscription.id, {
+			meses,
+			fechaInicio: new Date(fechaInicio).toISOString(),
+			fechaVencimiento: new Date(fechaVencimiento).toISOString(),
+			valorTotal: monto,
+			valorMensual: subscription.valorMensual ?? monto,
+			pago: {
+				monto,
+				metodoPago: {
+					tipo: "manual",
+					ultimosCuatroDigitos: "",
+					proveedor: "manual",
+				},
+			},
+			notas: "Renovación manual",
+		});
+
+		if (updated) {
+			setSubscription(updated);
+			toast.success("Suscripcion renovada correctamente");
+		} else {
+			toast.error("Error al renovar la suscripcion");
+			throw new Error("Failed to renew subscription");
 		}
 	};
 
@@ -596,6 +646,140 @@ export function SubscriptionDetailPage() {
 				)}
 			</div>
 
+			{/* Historial de transacciones (endpoint por negocioId) */}
+			<div className="bg-card rounded-lg border p-6 mb-6">
+				<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+					Historial de transacciones
+				</h3>
+				{transactionsError && (
+					<div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm flex items-center justify-between">
+						<span>{transactionsError}</span>
+						<Button variant="outline" size="sm" onClick={() => loadTransactions(transactionsPage)}>
+							Reintentar
+						</Button>
+					</div>
+				)}
+				{isLoadingTransactions ? (
+					<div className="flex items-center justify-center py-8">
+						<Icon icon="lucide:loader-2" className="animate-spin mr-2" size={24} />
+						<span className="text-muted-foreground">Cargando transacciones...</span>
+					</div>
+				) : transactions.length > 0 ? (
+					<>
+						<div className="overflow-x-auto">
+							<table className="w-full">
+								<thead>
+									<tr className="border-b bg-muted/50">
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">FECHA</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">REF.</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">DESCRIPCIÓN</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">PLAN</th>
+										<th className="text-right p-3 font-medium text-muted-foreground text-sm">VALOR</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">DESCUENTOS</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">ESTADO</th>
+										<th className="text-left p-3 font-medium text-muted-foreground text-sm">MÉTODO</th>
+									</tr>
+								</thead>
+								<tbody>
+									{transactions.map((tx) => (
+										<tr key={tx.id} className="border-b last:border-b-0">
+											<td className="p-3 text-sm text-muted-foreground">
+												{formatShortDate(tx.createdAt)}
+											</td>
+											<td className="p-3">
+									<button
+										type="button"
+										onClick={() => setSelectedTransaction(tx)}
+										className="text-sm font-mono text-primary underline-offset-2 hover:underline cursor-pointer"
+									>
+										{tx.referencia || "-"}
+									</button>
+								</td>
+											<td className="p-3 text-sm">{tx.descripcion || "-"}</td>
+											<td className="p-3 text-sm">{tx.planName || "-"}</td>
+											<td className="p-3 text-sm text-right font-medium">
+												{formatCurrency(tx.valor, (tx.moneda as SubscriptionMoneda) || "COP")}
+											</td>
+											<td className="p-3">
+												<div className="flex flex-wrap gap-1">
+													{tx.descuentoAnual && (
+														<Badge
+															variant="outline"
+															className="text-xs bg-green-100 text-green-700 border-green-200 cursor-pointer"
+															onClick={() => setSelectedTransaction(tx)}
+														>
+															<Icon icon="lucide:tag" className="mr-1 h-3 w-3" />
+															{tx.descuentoAnual.porcentaje}% OFF
+														</Badge>
+													)}
+													{tx.prorrateo?.aplicaProrrateo && (
+														<Badge
+															variant="outline"
+															className="text-xs bg-blue-100 text-blue-700 border-blue-200 cursor-pointer"
+															onClick={() => setSelectedTransaction(tx)}
+														>
+															<Icon icon="lucide:calendar-days" className="mr-1 h-3 w-3" />
+															Prorrateo
+														</Badge>
+													)}
+													{!tx.descuentoAnual && !tx.prorrateo?.aplicaProrrateo && (
+														<span className="text-muted-foreground text-sm">-</span>
+													)}
+												</div>
+											</td>
+											<td className="p-3">
+												<Badge
+													variant="outline"
+													className={cn(
+														"text-xs",
+														tx.estado === "aprobada"
+															? "bg-green-100 text-green-700 border-green-200"
+															: "bg-gray-100 text-gray-700 border-gray-200"
+													)}
+												>
+													{tx.estado || "-"}
+												</Badge>
+											</td>
+											<td className="p-3 text-sm">{tx.metodoPago || "-"}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+						{transactionsTotalPages > 1 && (
+							<div className="flex items-center justify-between mt-4 pt-4 border-t">
+								<p className="text-sm text-muted-foreground">
+									Mostrando {(transactionsPage - 1) * transactionsLimit + 1}–
+									{Math.min(transactionsPage * transactionsLimit, transactionsTotal)} de {transactionsTotal}
+								</p>
+								<div className="flex gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={transactionsPage <= 1}
+										onClick={() => setTransactionsPage(transactionsPage - 1)}
+									>
+										Anterior
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={transactionsPage >= transactionsTotalPages}
+										onClick={() => setTransactionsPage(transactionsPage + 1)}
+									>
+										Siguiente
+									</Button>
+								</div>
+							</div>
+						)}
+					</>
+				) : (
+					<p className="text-muted-foreground text-center py-4">
+						No hay transacciones registradas para este negocio
+					</p>
+				)}
+			</div>
+
 			{/* Notes */}
 			{subscription.notas && (
 				<div className="bg-card rounded-lg border p-6 mb-6">
@@ -625,6 +809,16 @@ export function SubscriptionDetailPage() {
 					>
 						<Icon icon="lucide:arrow-up-circle" className="mr-2 h-4 w-4" />
 						{t("subscriptions.detail.upgradePlan", "Actualizar Plan")}
+					</Button>
+
+					{/* Botón de renovar suscripción */}
+					<Button
+						variant="outline"
+						className="border-green-300 text-green-600 hover:bg-green-50"
+						onClick={() => setIsRenewModalOpen(true)}
+					>
+						<Icon icon="lucide:calendar-check" className="mr-2 h-4 w-4" />
+						Renovar Suscripcion
 					</Button>
 
 					{/* Botones de estado */}
@@ -723,6 +917,21 @@ export function SubscriptionDetailPage() {
 				isOpen={isInvoiceModalOpen}
 				onClose={() => setIsInvoiceModalOpen(false)}
 				subscription={subscription}
+			/>
+
+			{/* Modal para renovar suscripción */}
+			<ModalRenewSubscription
+				isOpen={isRenewModalOpen}
+				onClose={() => setIsRenewModalOpen(false)}
+				onConfirm={handleRenewSubscription}
+				subscription={subscription}
+			/>
+
+			{/* Modal detalle de transacción */}
+			<ModalTransactionDetail
+				isOpen={!!selectedTransaction}
+				onClose={() => setSelectedTransaction(null)}
+				transaction={selectedTransaction}
 			/>
 		</div>
 	);

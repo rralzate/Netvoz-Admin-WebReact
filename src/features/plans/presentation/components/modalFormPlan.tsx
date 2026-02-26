@@ -60,6 +60,7 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 		precio: number;
 		moneda: PlanMoneda;
 		duracionMeses: number;
+		porcentajeDescuento: number;
 		caracteristicas: PlanCaracteristicas;
 		activo: boolean;
 		popular: boolean;
@@ -69,6 +70,7 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 		precio: 0,
 		moneda: "COP",
 		duracionMeses: 1,
+		porcentajeDescuento: 0,
 		caracteristicas: defaultCaracteristicas,
 		activo: true,
 		popular: false,
@@ -85,6 +87,7 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 				precio: plan.precio,
 				moneda: plan.moneda,
 				duracionMeses: plan.duracionMeses,
+				porcentajeDescuento: plan.porcentajeDescuento || 0,
 				caracteristicas: { ...plan.caracteristicas },
 				activo: plan.activo,
 				popular: plan.popular || false,
@@ -96,6 +99,7 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 				precio: 0,
 				moneda: "COP",
 				duracionMeses: 1,
+				porcentajeDescuento: 0,
 				caracteristicas: { ...defaultCaracteristicas },
 				activo: true,
 				popular: false,
@@ -118,6 +122,10 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 
 		if (formData.precio < 0) {
 			newErrors.precio = t("plans.form.errors.precioInvalid", "El precio no puede ser negativo");
+		}
+
+		if (formData.porcentajeDescuento < 0 || formData.porcentajeDescuento > 100) {
+			newErrors.descuento = "El descuento debe estar entre 0 y 100";
 		}
 
 		if (formData.duracionMeses < 1 || formData.duracionMeses > 24) {
@@ -246,7 +254,7 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 							)}
 						</div>
 
-						<div className="grid grid-cols-2 gap-4">
+						<div className="grid grid-cols-3 gap-4">
 							<div className="space-y-2">
 								<Label htmlFor="precio">{t("plans.form.precio", "Precio")} *</Label>
 								<Input
@@ -259,6 +267,28 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 								/>
 								{errors.precio && (
 									<p className="text-xs text-red-500">{errors.precio}</p>
+								)}
+							</div>
+
+							<div className="space-y-2">
+								<Label htmlFor="descuento">Descuento (%)</Label>
+								<Input
+									id="descuento"
+									type="number"
+									min={0}
+									max={100}
+									value={formData.porcentajeDescuento}
+									onChange={(e) => handleInputChange("porcentajeDescuento", e.target.value === "" ? 0 : parseFloat(e.target.value))}
+									className={errors.descuento ? "border-red-500" : ""}
+									placeholder="0"
+								/>
+								{errors.descuento && (
+									<p className="text-xs text-red-500">{errors.descuento}</p>
+								)}
+								{formData.porcentajeDescuento > 0 && (
+									<p className="text-xs text-green-600">
+										Precio con descuento: $ {((formData.precio * (100 - formData.porcentajeDescuento)) / 100).toLocaleString()}
+									</p>
 								)}
 							</div>
 

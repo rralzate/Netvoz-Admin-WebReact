@@ -5,6 +5,7 @@ import type {
 	SubscriptionCreateRequest,
 	SubscriptionUpdateRequest,
 } from "../entities/SubscriptionEntity";
+import type { SubscriptionRenew } from "../entities/suscriptionRenew";
 
 export interface ChangePlanRequest {
 	planId: string;
@@ -19,5 +20,6 @@ export interface SubscriptionRepository {
 	create(data: SubscriptionCreateRequest): Promise<SubscriptionEntity>;
 	update(id: string, data: SubscriptionUpdateRequest): Promise<SubscriptionEntity>;
 	changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity>;
+	renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity>;
 	delete(id: string): Promise<void>;
 }

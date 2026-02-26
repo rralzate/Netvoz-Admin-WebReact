@@ -5,6 +5,7 @@ import type {
 	SubscriptionCreateRequest,
 	SubscriptionUpdateRequest,
 } from "../../domain/entities/SubscriptionEntity";
+import type { SubscriptionRenew } from "../../domain/entities/suscriptionRenew";
 import type { SubscriptionRepository, ChangePlanRequest } from "../../domain/repositories/SubscriptionRepository";
 import type { SubscriptionDatasource } from "../datasource/SubscriptionDatasource";
 
@@ -29,6 +30,10 @@ export class SubscriptionRepositoryImpl implements SubscriptionRepository {
 
 	async changePlan(id: string, data: ChangePlanRequest): Promise<SubscriptionEntity> {
 		return this.datasource.changePlan(id, data);
+	}
+
+	async renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity> {
+		return this.datasource.renewSubscription(id, data);
 	}
 
 	async delete(id: string): Promise<void> {
