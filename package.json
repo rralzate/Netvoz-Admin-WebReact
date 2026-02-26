@@ -8,7 +8,7 @@
 		"dev": "vite",
 		"build": "tsc && vite build && cp staticwebapp.config.json dist/",
 		"preview": "vite preview",
-		"preinstall": "lefthook install",
+		"preinstall": "npx lefthook install || true",
 		"postinstall": "echo 'Dependencies installed successfully'"
 	},
 	"dependencies": {
