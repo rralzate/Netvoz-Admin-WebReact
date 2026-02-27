@@ -12,6 +12,8 @@ export interface ChangePlanRequest {
 	nombrePlan: string;
 	valorMensual?: number;
 	valorTotal?: number;
+	fechaInicio?: string;
+	fechaVencimiento?: string;
 }
 
 export interface SubscriptionRepository {

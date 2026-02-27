@@ -248,30 +248,56 @@ export function SubscriptionDetailPage() {
 		}
 	};
 
-	// Handle plan change - uses dedicated endpoint PUT /subscriptions/:id/plan
+	// Handle plan change: 1) PUT /subscriptions/:id/plan (solo plan), 2) POST /subscriptions/:id/renew (fechas y valores)
 	const handleChangePlan = async (planId: string, planNombre: string, precio: number, meses: number, monto: number) => {
 		if (!subscription) return;
 
-		const changePlanData = {
+		// 1) Actualizar solo el plan (planId, nombrePlan)
+		const planUpdated = await changePlan(subscription.id, {
 			planId,
 			nombrePlan: planNombre,
-			valorMensual: precio,
+		});
+		if (!planUpdated) {
+			toast.error(t("subscriptions.changePlan.error", "Error al cambiar el plan"));
+			throw new Error("Failed to update subscription plan");
+		}
+
+		// 2) Calcular fechas igual que en renovación
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		const vencimientoActual = subscription.fechaVencimiento ? new Date(subscription.fechaVencimiento) : null;
+		const startDate = vencimientoActual && vencimientoActual >= today ? new Date(vencimientoActual) : new Date(today);
+		startDate.setHours(0, 0, 0, 0);
+		const endDate = new Date(startDate);
+		endDate.setMonth(endDate.getMonth() + meses);
+
+		const fechaInicio = new Date(startDate).toISOString();
+		const fechaVencimiento = new Date(endDate).toISOString();
+
+		// 3) Usar la ruta renew para actualizar fecha inicio, fecha fin y valores
+		const updated = await renewSubscription(subscription.id, {
+			meses,
+			fechaInicio,
+			fechaVencimiento,
 			valorTotal: monto,
-		};
-
-		console.log("handleChangePlan - Sending data:", changePlanData);
-
-		const updated = await changePlan(subscription.id, changePlanData);
-
-		console.log("handleChangePlan - Received updated:", updated);
+			valorMensual: precio,
+			pago: {
+				monto,
+				metodoPago: {
+					tipo: "manual",
+					ultimosCuatroDigitos: "",
+					proveedor: "manual",
+				},
+			},
+			notas: "Cambio de plan",
+		});
 
 		if (updated) {
 			setSubscription(updated);
 			toast.success(t("subscriptions.changePlan.success", "Plan actualizado correctamente"));
 		} else {
-			console.error("Error: changePlan retornó null. Ver error en el hook.");
-			toast.error(t("subscriptions.changePlan.error", "Error al cambiar el plan"));
-			throw new Error("Failed to update subscription plan");
+			toast.error(t("subscriptions.changePlan.error", "Error al actualizar fechas y valores"));
+			throw new Error("Failed to renew subscription after plan change");
 		}
 	};
 
