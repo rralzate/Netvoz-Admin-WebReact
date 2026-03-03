@@ -100,6 +100,22 @@ export interface SubscriptionTransactionDescuentoAnual {
 	descripcion: string;
 }
 
+// Datos adicionales de la pasarela (ePayco, etc.)
+export interface SubscriptionTransactionDatosAdicionales {
+	x_ref_payco?: string;
+	x_cardnumber?: string;
+	x_currency_code?: string;
+	x_amount?: string;
+	x_response_reason_text?: string;
+	x_cod_transaction_state?: string;
+	x_cod_respuesta?: string;
+	x_transaction_id?: string;
+	x_franchise?: string;
+	x_test_request?: string;
+	x_3ds_authentication?: string;
+	[key: string]: string | undefined;
+}
+
 // Transacción ePayco (respuesta GET /epayco/transactions/by-business/:negocioId)
 export interface SubscriptionTransactionEntity {
 	id: string;
@@ -123,6 +139,14 @@ export interface SubscriptionTransactionEntity {
 	descuentoAnual?: SubscriptionTransactionDescuentoAnual;
 	createdAt?: string;
 	updatedAt?: string;
+	// Campos adicionales del API
+	factura?: string;
+	bancoNombre?: string;
+	codigoRespuesta?: string;
+	mensajeRespuesta?: string;
+	codigoAprobacion?: string;
+	fechaTransaccion?: string;
+	datosAdicionales?: SubscriptionTransactionDatosAdicionales;
 }
 
 export interface SubscriptionTransactionListResponse {

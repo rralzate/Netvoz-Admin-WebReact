@@ -128,8 +128,8 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 			newErrors.descuento = "El descuento debe estar entre 0 y 100";
 		}
 
-		if (formData.duracionMeses < 1 || formData.duracionMeses > 24) {
-			newErrors.duracionMeses = t("plans.form.errors.duracionInvalid", "La duración debe estar entre 1 y 24 meses");
+		if (formData.duracionMeses < 0.5 || formData.duracionMeses > 24) {
+			newErrors.duracionMeses = t("plans.form.errors.duracionInvalid", "La duración debe estar entre 0.5 y 24 meses");
 		}
 
 		if (formData.caracteristicas.maxUsuarios < 1) {
@@ -227,10 +227,14 @@ export const ModalFormPlan: React.FC<ModalFormPlanProps> = ({
 								<Input
 									id="duracionMeses"
 									type="number"
-									min={1}
+									min={0.5}
 									max={24}
+									step={0.1}
 									value={formData.duracionMeses}
-									onChange={(e) => handleInputChange("duracionMeses", parseInt(e.target.value) || 1)}
+									onChange={(e) => {
+										const v = parseFloat(e.target.value);
+										handleInputChange("duracionMeses", Number.isFinite(v) ? v : 0.5);
+									}}
 									className={errors.duracionMeses ? "border-red-500" : ""}
 								/>
 								{errors.duracionMeses && (

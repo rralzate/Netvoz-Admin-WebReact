@@ -15,6 +15,8 @@ export interface ChangePlanRequest {
 	nombrePlan: string;
 	valorMensual?: number;
 	valorTotal?: number;
+	fechaInicio?: string;
+	fechaVencimiento?: string;
 }
 
 export interface SubscriptionDatasource {
@@ -143,21 +145,25 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 			},
 		});
 
-		// Step 2: Update subscription values (valorMensual, valorTotal) using regular endpoint
-		if (data.valorMensual !== undefined || data.valorTotal !== undefined) {
-			console.log("SubscriptionDatasource.changePlan - Step 2: Update values");
+		// Step 2: Update subscription values (valorMensual, valorTotal, fechas) using regular endpoint
+		const hasValuesOrDates =
+			data.valorMensual !== undefined ||
+			data.valorTotal !== undefined ||
+			data.fechaInicio !== undefined ||
+			data.fechaVencimiento !== undefined;
+		if (hasValuesOrDates) {
+			console.log("SubscriptionDatasource.changePlan - Step 2: Update values and dates");
 			console.log("SubscriptionDatasource.changePlan - URL:", urls.subscriptionById(id));
-			console.log("SubscriptionDatasource.changePlan - Values Data:", {
-				valorMensual: data.valorMensual,
-				valorTotal: data.valorTotal,
-			});
+			const putData: Record<string, unknown> = {};
+			if (data.valorMensual !== undefined) putData.valorMensual = data.valorMensual;
+			if (data.valorTotal !== undefined) putData.valorTotal = data.valorTotal;
+			if (data.fechaInicio !== undefined) putData.fechaInicio = data.fechaInicio;
+			if (data.fechaVencimiento !== undefined) putData.fechaVencimiento = data.fechaVencimiento;
+			console.log("SubscriptionDatasource.changePlan - Values Data:", putData);
 
 			const response = await APIClient.put<any>({
 				url: urls.subscriptionById(id),
-				data: {
-					valorMensual: data.valorMensual,
-					valorTotal: data.valorTotal,
-				},
+				data: putData,
 			});
 
 			console.log("SubscriptionDatasource.changePlan - Raw Response:", response);
@@ -185,7 +191,9 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 	}
 
 	async renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity> {
-		const response = await APIClient.post<any>({ url: urls.suscriptionRenew(id), data });
+		// El API no recibe "meses"; solo fechaInicio, fechaVencimiento, valorTotal, valorMensual, pago, notas, datosFacturacion
+		const { meses: _meses, ...payload } = data;
+		const response = await APIClient.post<any>({ url: urls.suscriptionRenew(id), data: payload });
 		const subscriptionData = response?.data || response;
 		return {
 			...subscriptionData,

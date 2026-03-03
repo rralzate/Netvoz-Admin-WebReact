@@ -20,7 +20,15 @@ import type { SubscriptionEntity } from "../../domain/entities/SubscriptionEntit
 interface ModalChangePlanProps {
 	isOpen: boolean;
 	onClose: () => void;
-	onConfirm: (planId: string, planNombre: string, precio: number, meses: number, monto: number) => Promise<void>;
+	onConfirm: (
+		planId: string,
+		planNombre: string,
+		precio: number,
+		meses: number,
+		monto: number,
+		fechaInicio: string,
+		fechaVencimiento: string
+	) => Promise<void>;
 	subscription: SubscriptionEntity;
 	plans: PlanEntity[];
 	isLoading?: boolean;
@@ -72,6 +80,15 @@ export function ModalChangePlan({
 	const handleConfirm = async () => {
 		if (!selectedPlan) return;
 
+		// Misma lógica que Renovar: fechaInicio = vencimiento actual, fechaVencimiento = inicio + meses
+		const fechaInicioDate = subscription.fechaVencimiento
+			? new Date(subscription.fechaVencimiento)
+			: new Date();
+		const fechaVencimientoDate = new Date(fechaInicioDate);
+		fechaVencimientoDate.setMonth(fechaVencimientoDate.getMonth() + meses);
+		const fechaInicio = fechaInicioDate.toISOString().split("T")[0];
+		const fechaVencimiento = fechaVencimientoDate.toISOString().split("T")[0];
+
 		setIsSubmitting(true);
 		try {
 			await onConfirm(
@@ -79,7 +96,9 @@ export function ModalChangePlan({
 				selectedPlan.nombre || "Plan",
 				selectedPlan.precio ?? 0,
 				meses,
-				monto
+				monto,
+				fechaInicio,
+				fechaVencimiento
 			);
 			setSelectedPlanId(null);
 			setMeses(1);

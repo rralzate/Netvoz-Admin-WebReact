@@ -17,6 +17,7 @@ export const GLOBAL_CONFIG: GlobalConfig = {
 	apiBaseUrl:
 		import.meta.env.VITE_APP_API_BASE_URL ||
 		(window as any).APP_CONFIG?.apiBaseUrl ||
-		"https://netvozposapitest-fdhfeaekhthge8eh.eastus-01.azurewebsites.net/api/v1",
+		"http://localhost:8080/api/v1",
+		//"https://netvozposapitest-fdhfeaekhthge8eh.eastus-01.azurewebsites.net/api/v1",
 	routerMode: import.meta.env.VITE_APP_ROUTER_MODE || (window as any).APP_CONFIG?.routerMode || "frontend",
 };
