@@ -70,18 +70,6 @@ function formatDate(dateString: string | undefined | null): string {
 	}
 }
 
-function formatShortDate(dateString: string | undefined | null): string {
-	if (!dateString) return "-";
-	try {
-		return new Date(dateString).toLocaleDateString("es-CO", {
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-		});
-	} catch {
-		return "-";
-	}
-}
 
 interface ProgressBarProps {
 	current: number | undefined;
