@@ -145,13 +145,13 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 			},
 		});
 
-		// Step 2: Update subscription values (valorMensual, valorTotal) y fechas (fechaInicio, fechaVencimiento) usando PUT
-		const hasValues =
+		// Step 2: Update subscription values (valorMensual, valorTotal, fechas) using regular endpoint
+		const hasValuesOrDates =
 			data.valorMensual !== undefined ||
 			data.valorTotal !== undefined ||
 			data.fechaInicio !== undefined ||
 			data.fechaVencimiento !== undefined;
-		if (hasValues) {
+		if (hasValuesOrDates) {
 			console.log("SubscriptionDatasource.changePlan - Step 2: Update values and dates");
 			console.log("SubscriptionDatasource.changePlan - URL:", urls.subscriptionById(id));
 			const putData: Record<string, unknown> = {};
@@ -159,7 +159,7 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 			if (data.valorTotal !== undefined) putData.valorTotal = data.valorTotal;
 			if (data.fechaInicio !== undefined) putData.fechaInicio = data.fechaInicio;
 			if (data.fechaVencimiento !== undefined) putData.fechaVencimiento = data.fechaVencimiento;
-			console.log("SubscriptionDatasource.changePlan - Put Data:", putData);
+			console.log("SubscriptionDatasource.changePlan - Values Data:", putData);
 
 			const response = await APIClient.put<any>({
 				url: urls.subscriptionById(id),
@@ -191,7 +191,9 @@ export class SubscriptionDatasourceImpl implements SubscriptionDatasource {
 	}
 
 	async renewSubscription(id: string, data: SubscriptionRenew): Promise<SubscriptionEntity> {
-		const response = await APIClient.post<any>({ url: urls.suscriptionRenew(id), data });
+		// El API no recibe "meses"; solo fechaInicio, fechaVencimiento, valorTotal, valorMensual, pago, notas, datosFacturacion
+		const { meses: _meses, ...payload } = data;
+		const response = await APIClient.post<any>({ url: urls.suscriptionRenew(id), data: payload });
 		const subscriptionData = response?.data || response;
 		return {
 			...subscriptionData,

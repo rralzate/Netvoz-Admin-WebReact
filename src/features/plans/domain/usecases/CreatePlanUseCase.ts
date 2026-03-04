@@ -26,8 +26,8 @@ export class CreatePlanUseCaseImpl implements CreatePlanUseCase {
 			throw new Error("La moneda debe ser COP o USD");
 		}
 
-		if (data.duracionMeses < 1 || data.duracionMeses > 24) {
-			throw new Error("La duración debe estar entre 1 y 24 meses");
+		if (data.duracionMeses < 0.5 || data.duracionMeses > 24) {
+			throw new Error("La duración debe estar entre 0.5 y 24 meses");
 		}
 
 		if (data.caracteristicas.maxUsuarios < 1) {

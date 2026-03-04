@@ -12,15 +12,14 @@ import type {
 	SubscriptionEstado,
 	SubscriptionMetodoPagoTipo,
 	SubscriptionMoneda,
-	SubscriptionPagoEstado,
 } from "../../../domain/entities/SubscriptionEntity";
 import { useSubscriptions } from "../../hooks/useSubscriptions";
 import { useBusinessInfo } from "../../hooks/useBusinessInfo";
 import { useSubscriptionTransactions } from "../../hooks/useSubscriptionTransactions";
 import { ModalChangePlan } from "../../components/ModalChangePlan";
-import { ModalGenerateInvoice } from "../../components/ModalGenerateInvoice";
 import { ModalRenewSubscription } from "../../components/ModalRenewSubscription";
 import { ModalTransactionDetail } from "../../components/ModalTransactionDetail";
+import { SubscriptionTransactionsTable } from "../../components/SubscriptionTransactionsTable";
 import type { SubscriptionTransactionEntity } from "../../../domain/entities/SubscriptionEntity";
 
 const statusColors: Record<SubscriptionEstado, string> = {
@@ -47,17 +46,7 @@ const paymentMethodLabels: Record<SubscriptionMetodoPagoTipo, string> = {
 	efectivo: "Efectivo",
 };
 
-const paymentStatusColors: Record<SubscriptionPagoEstado, string> = {
-	exitoso: "bg-green-100 text-green-700 border-green-200",
-	pendiente: "bg-orange-100 text-orange-700 border-orange-200",
-	fallido: "bg-red-100 text-red-700 border-red-200",
-};
 
-const paymentStatusLabels: Record<SubscriptionPagoEstado, string> = {
-	exitoso: "Exitoso",
-	pendiente: "Pendiente",
-	fallido: "Fallido",
-};
 
 function formatCurrency(value: number | undefined | null, moneda: SubscriptionMoneda = "COP"): string {
 	const safeValue = value ?? 0;
@@ -140,7 +129,6 @@ export function SubscriptionDetailPage() {
 	const { id } = useParams<{ id: string }>();
 	const [subscription, setSubscription] = useState<SubscriptionEntity | null>(null);
 	const [isChangePlanModalOpen, setIsChangePlanModalOpen] = useState(false);
-	const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 	const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
 	const [selectedTransaction, setSelectedTransaction] = useState<SubscriptionTransactionEntity | null>(null);
 
@@ -248,37 +236,33 @@ export function SubscriptionDetailPage() {
 		}
 	};
 
-	// Handle plan change: 1) PUT /subscriptions/:id/plan (solo plan), 2) POST /subscriptions/:id/renew (fechas y valores)
-	const handleChangePlan = async (planId: string, planNombre: string, precio: number, meses: number, monto: number) => {
+	// Handle plan change: primero actualiza plan, luego renueva suscripción con fechas/pago (mismo payload que Renovar)
+	const handleChangePlan = async (
+		planId: string,
+		planNombre: string,
+		precio: number,
+		_meses: number,
+		monto: number,
+		fechaInicio: string,
+		fechaVencimiento: string
+	) => {
 		if (!subscription) return;
 
-		// 1) Actualizar solo el plan (planId, nombrePlan)
-		const planUpdated = await changePlan(subscription.id, {
+		// 1) Actualizar plan (planId, nombre, valorMensual, valorTotal)
+		const changePlanData = {
 			planId,
 			nombrePlan: planNombre,
-		});
-		if (!planUpdated) {
+		};
+		const updatedPlan = await changePlan(subscription.id, changePlanData);
+		if (!updatedPlan) {
 			toast.error(t("subscriptions.changePlan.error", "Error al cambiar el plan"));
 			throw new Error("Failed to update subscription plan");
 		}
 
-		// 2) Calcular fechas igual que en renovación
-		const today = new Date();
-		today.setHours(0, 0, 0, 0);
-		const vencimientoActual = subscription.fechaVencimiento ? new Date(subscription.fechaVencimiento) : null;
-		const startDate = vencimientoActual && vencimientoActual >= today ? new Date(vencimientoActual) : new Date(today);
-		startDate.setHours(0, 0, 0, 0);
-		const endDate = new Date(startDate);
-		endDate.setMonth(endDate.getMonth() + meses);
-
-		const fechaInicio = new Date(startDate).toISOString();
-		const fechaVencimiento = new Date(endDate).toISOString();
-
-		// 3) Usar la ruta renew para actualizar fecha inicio, fecha fin y valores
-		const updated = await renewSubscription(subscription.id, {
-			meses,
-			fechaInicio,
-			fechaVencimiento,
+		// 2) Renovar suscripción con los mismos datos (fechas, monto, pago) vía POST .../renew
+		const renewPayload = {
+			fechaInicio: new Date(fechaInicio).toISOString(),
+			fechaVencimiento: new Date(fechaVencimiento).toISOString(),
 			valorTotal: monto,
 			valorMensual: precio,
 			pago: {
@@ -289,15 +273,18 @@ export function SubscriptionDetailPage() {
 					proveedor: "manual",
 				},
 			},
-			notas: "Cambio de plan",
-		});
-
-		if (updated) {
-			setSubscription(updated);
+			notas: "Actualización de plan",
+		};
+		const renewed = await renewSubscription(subscription.id, renewPayload);
+		if (renewed) {
+			setSubscription(renewed);
 			toast.success(t("subscriptions.changePlan.success", "Plan actualizado correctamente"));
 		} else {
-			toast.error(t("subscriptions.changePlan.error", "Error al actualizar fechas y valores"));
-			throw new Error("Failed to renew subscription after plan change");
+			// Plan ya se actualizó; solo falló renew (fechas/pago)
+			setSubscription(updatedPlan);
+			toast.warning(
+				t("subscriptions.changePlan.renewWarning", "Plan actualizado; no se pudieron aplicar las fechas de renovación.")
+			);
 		}
 	};
 
@@ -496,6 +483,107 @@ export function SubscriptionDetailPage() {
 					</Badge>
 				</div>
 			</div>
+			{/* Actions */}
+			<div className="bg-card rounded-lg border p-6">
+				<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+					{t("subscriptions.detail.actions", "Acciones")}
+				</h3>
+				<div className="flex flex-wrap gap-3">
+					{/* Botón de actualizar plan - siempre visible */}
+					<Button
+						className="bg-primary hover:bg-primary/90"
+						onClick={() => setIsChangePlanModalOpen(true)}
+					>
+						<Icon icon="lucide:arrow-up-circle" className="mr-2 h-4 w-4" />
+						{t("subscriptions.detail.upgradePlan", "Actualizar Plan")}
+					</Button>
+
+					{/* Botón de renovar suscripción */}
+					<Button
+						variant="outline"
+						className="border-green-300 text-green-600 hover:bg-green-50"
+						onClick={() => setIsRenewModalOpen(true)}
+					>
+						<Icon icon="lucide:calendar-check" className="mr-2 h-4 w-4" />
+						Renovar Suscripcion
+					</Button>
+
+					{/* Botones de estado */}
+					{subscription.estado === "activa" && (
+						<Button
+							variant="outline"
+							className="border-orange-300 text-orange-600 hover:bg-orange-50"
+							onClick={() => handleStatusChange("suspendida")}
+						>
+							<Icon icon="lucide:pause-circle" className="mr-2 h-4 w-4" />
+							{t("subscriptions.detail.suspend", "Suspender")}
+						</Button>
+					)}
+					{subscription.estado === "suspendida" && (
+						<Button
+							variant="outline"
+							className="border-green-300 text-green-600 hover:bg-green-50"
+							onClick={() => handleStatusChange("activa")}
+						>
+							<Icon icon="lucide:play-circle" className="mr-2 h-4 w-4" />
+							Reactivar
+						</Button>
+					)}
+					{(subscription.estado === "vencida" || subscription.estado === "pendiente_pago") && (
+						<>
+							<Button
+								variant="outline"
+								className="border-green-300 text-green-600 hover:bg-green-50"
+								onClick={() => handleStatusChange("activa")}
+							>
+								<Icon icon="lucide:play-circle" className="mr-2 h-4 w-4" />
+								Activar
+							</Button>
+							<Button
+								variant="outline"
+								className="border-blue-300 text-blue-600 hover:bg-blue-50"
+							>
+								<Icon icon="lucide:credit-card" className="mr-2 h-4 w-4" />
+								Registrar Pago
+							</Button>
+						</>
+					)}
+					{subscription.estado === "cancelada" && (
+						<Button
+							variant="outline"
+							className="border-green-300 text-green-600 hover:bg-green-50"
+							onClick={() => handleStatusChange("activa")}
+						>
+							<Icon icon="lucide:refresh-cw" className="mr-2 h-4 w-4" />
+							Reactivar Suscripción
+						</Button>
+					)}
+					{subscription.estado !== "cancelada" && (
+						<Button
+							variant="outline"
+							className="border-red-300 text-red-600 hover:bg-red-50"
+							onClick={() => handleStatusChange("cancelada")}
+						>
+							<Icon icon="lucide:x-circle" className="mr-2 h-4 w-4" />
+							Cancelar Suscripción
+						</Button>
+					)}
+					<Button
+						variant="outline"
+						onClick={handleSendReminder}
+						disabled={isSendingReminder}
+					>
+						{isSendingReminder ? (
+							<Icon icon="lucide:loader-2" className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							<Icon icon="lucide:mail" className="mr-2 h-4 w-4" />
+						)}
+						{isSendingReminder
+							? t("subscriptions.detail.sendingReminder", "Enviando...")
+							: t("subscriptions.detail.sendReminder", "Enviar Recordatorio")}
+					</Button>
+				</div>
+			</div>
 
 			{/* Content Grid */}
 			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -596,215 +684,9 @@ export function SubscriptionDetailPage() {
 				</div>
 			</div>
 
-			{/* Payment History */}
-			<div className="bg-card rounded-lg border p-6 mb-6">
-				<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-					Historial de Pagos
-				</h3>
-				{subscription.historialPagos && subscription.historialPagos.length > 0 ? (
-					<div className="overflow-hidden">
-						<table className="w-full">
-							<thead>
-								<tr className="border-b bg-muted/50">
-									<th className="text-left p-3 font-medium text-muted-foreground text-sm">
-										FECHA
-									</th>
-									<th className="text-left p-3 font-medium text-muted-foreground text-sm">
-										MONTO
-									</th>
-									<th className="text-left p-3 font-medium text-muted-foreground text-sm">
-										MÉTODO
-									</th>
-									<th className="text-left p-3 font-medium text-muted-foreground text-sm">
-										TRANSACCIÓN
-									</th>
-									<th className="text-left p-3 font-medium text-muted-foreground text-sm">
-										ESTADO
-									</th>
-									<th className="text-left p-3 font-medium text-muted-foreground text-sm">
-										COMPROBANTE
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{subscription.historialPagos.map((pago) => (
-									<tr key={pago.transaccionId} className="border-b last:border-b-0">
-										<td className="p-3 text-sm">{formatShortDate(pago.fechaPago)}</td>
-										<td className="p-3 font-medium">
-											{formatCurrency(pago.monto, subscription.moneda || "COP")}
-										</td>
-										<td className="p-3 text-sm">{pago.metodoPago || "-"}</td>
-										<td className="p-3 text-sm font-mono text-muted-foreground">
-											{pago.transaccionId || "-"}
-										</td>
-										<td className="p-3">
-											<Badge
-												variant="outline"
-												className={cn("text-xs", pago.estado ? paymentStatusColors[pago.estado] : "bg-gray-100 text-gray-700 border-gray-200")}
-											>
-												{pago.estado ? paymentStatusLabels[pago.estado] : "Desconocido"}
-											</Badge>
-										</td>
-										<td className="p-3">
-											{pago.comprobanteUrl ? (
-												<Button variant="ghost" size="sm" asChild>
-													<a
-														href={pago.comprobanteUrl}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														<Icon icon="lucide:file-text" className="h-4 w-4" />
-													</a>
-												</Button>
-											) : (
-												<span className="text-muted-foreground text-sm">-</span>
-											)}
-										</td>
-									</tr>
-								))}
-							</tbody>
-						</table>
-					</div>
-				) : (
-					<p className="text-muted-foreground text-center py-4">
-						No hay historial de pagos disponible
-					</p>
-				)}
-			</div>
+			
 
-			{/* Historial de transacciones (endpoint por negocioId) */}
-			<div className="bg-card rounded-lg border p-6 mb-6">
-				<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-					Historial de transacciones
-				</h3>
-				{transactionsError && (
-					<div className="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm flex items-center justify-between">
-						<span>{transactionsError}</span>
-						<Button variant="outline" size="sm" onClick={() => loadTransactions(transactionsPage)}>
-							Reintentar
-						</Button>
-					</div>
-				)}
-				{isLoadingTransactions ? (
-					<div className="flex items-center justify-center py-8">
-						<Icon icon="lucide:loader-2" className="animate-spin mr-2" size={24} />
-						<span className="text-muted-foreground">Cargando transacciones...</span>
-					</div>
-				) : transactions.length > 0 ? (
-					<>
-						<div className="overflow-x-auto">
-							<table className="w-full">
-								<thead>
-									<tr className="border-b bg-muted/50">
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">FECHA</th>
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">REF.</th>
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">DESCRIPCIÓN</th>
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">PLAN</th>
-										<th className="text-right p-3 font-medium text-muted-foreground text-sm">VALOR</th>
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">DESCUENTOS</th>
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">ESTADO</th>
-										<th className="text-left p-3 font-medium text-muted-foreground text-sm">MÉTODO</th>
-									</tr>
-								</thead>
-								<tbody>
-									{transactions.map((tx) => (
-										<tr key={tx.id} className="border-b last:border-b-0">
-											<td className="p-3 text-sm text-muted-foreground">
-												{formatShortDate(tx.createdAt)}
-											</td>
-											<td className="p-3">
-									<button
-										type="button"
-										onClick={() => setSelectedTransaction(tx)}
-										className="text-sm font-mono text-primary underline-offset-2 hover:underline cursor-pointer"
-									>
-										{tx.referencia || "-"}
-									</button>
-								</td>
-											<td className="p-3 text-sm">{tx.descripcion || "-"}</td>
-											<td className="p-3 text-sm">{tx.planName || "-"}</td>
-											<td className="p-3 text-sm text-right font-medium">
-												{formatCurrency(tx.valor, (tx.moneda as SubscriptionMoneda) || "COP")}
-											</td>
-											<td className="p-3">
-												<div className="flex flex-wrap gap-1">
-													{tx.descuentoAnual && (
-														<Badge
-															variant="outline"
-															className="text-xs bg-green-100 text-green-700 border-green-200 cursor-pointer"
-															onClick={() => setSelectedTransaction(tx)}
-														>
-															<Icon icon="lucide:tag" className="mr-1 h-3 w-3" />
-															{tx.descuentoAnual.porcentaje}% OFF
-														</Badge>
-													)}
-													{tx.prorrateo?.aplicaProrrateo && (
-														<Badge
-															variant="outline"
-															className="text-xs bg-blue-100 text-blue-700 border-blue-200 cursor-pointer"
-															onClick={() => setSelectedTransaction(tx)}
-														>
-															<Icon icon="lucide:calendar-days" className="mr-1 h-3 w-3" />
-															Prorrateo
-														</Badge>
-													)}
-													{!tx.descuentoAnual && !tx.prorrateo?.aplicaProrrateo && (
-														<span className="text-muted-foreground text-sm">-</span>
-													)}
-												</div>
-											</td>
-											<td className="p-3">
-												<Badge
-													variant="outline"
-													className={cn(
-														"text-xs",
-														tx.estado === "aprobada"
-															? "bg-green-100 text-green-700 border-green-200"
-															: "bg-gray-100 text-gray-700 border-gray-200"
-													)}
-												>
-													{tx.estado || "-"}
-												</Badge>
-											</td>
-											<td className="p-3 text-sm">{tx.metodoPago || "-"}</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-						{transactionsTotalPages > 1 && (
-							<div className="flex items-center justify-between mt-4 pt-4 border-t">
-								<p className="text-sm text-muted-foreground">
-									Mostrando {(transactionsPage - 1) * transactionsLimit + 1}–
-									{Math.min(transactionsPage * transactionsLimit, transactionsTotal)} de {transactionsTotal}
-								</p>
-								<div className="flex gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={transactionsPage <= 1}
-										onClick={() => setTransactionsPage(transactionsPage - 1)}
-									>
-										Anterior
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={transactionsPage >= transactionsTotalPages}
-										onClick={() => setTransactionsPage(transactionsPage + 1)}
-									>
-										Siguiente
-									</Button>
-								</div>
-							</div>
-						)}
-					</>
-				) : (
-					<p className="text-muted-foreground text-center py-4">
-						No hay transacciones registradas para este negocio
-					</p>
-				)}
-			</div>
+			
 
 			{/* Notes */}
 			{subscription.notas && (
@@ -816,117 +698,21 @@ export function SubscriptionDetailPage() {
 				</div>
 			)}
 
-			{/* Actions */}
-			<div className="bg-card rounded-lg border p-6">
-				<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-					{t("subscriptions.detail.actions", "Acciones")}
-				</h3>
-				{/* Debug info - remove after testing */}
-				{import.meta.env.DEV && (
-					<p className="text-xs text-muted-foreground mb-2">
-						Estado actual: "{subscription.estado || 'undefined'}"
-					</p>
-				)}
-				<div className="flex flex-wrap gap-3">
-					{/* Botón de actualizar plan - siempre visible */}
-					<Button
-						className="bg-primary hover:bg-primary/90"
-						onClick={() => setIsChangePlanModalOpen(true)}
-					>
-						<Icon icon="lucide:arrow-up-circle" className="mr-2 h-4 w-4" />
-						{t("subscriptions.detail.upgradePlan", "Actualizar Plan")}
-					</Button>
+			
 
-					{/* Botón de renovar suscripción */}
-					<Button
-						variant="outline"
-						className="border-green-300 text-green-600 hover:bg-green-50"
-						onClick={() => setIsRenewModalOpen(true)}
-					>
-						<Icon icon="lucide:calendar-check" className="mr-2 h-4 w-4" />
-						Renovar Suscripcion
-					</Button>
-
-					{/* Botones de estado */}
-					{subscription.estado === "activa" && (
-						<Button
-							variant="outline"
-							className="border-orange-300 text-orange-600 hover:bg-orange-50"
-							onClick={() => handleStatusChange("suspendida")}
-						>
-							<Icon icon="lucide:pause-circle" className="mr-2 h-4 w-4" />
-							{t("subscriptions.detail.suspend", "Suspender")}
-						</Button>
-					)}
-					{subscription.estado === "suspendida" && (
-						<Button
-							variant="outline"
-							className="border-green-300 text-green-600 hover:bg-green-50"
-							onClick={() => handleStatusChange("activa")}
-						>
-							<Icon icon="lucide:play-circle" className="mr-2 h-4 w-4" />
-							Reactivar
-						</Button>
-					)}
-					{(subscription.estado === "vencida" || subscription.estado === "pendiente_pago") && (
-						<>
-							<Button
-								variant="outline"
-								className="border-green-300 text-green-600 hover:bg-green-50"
-								onClick={() => handleStatusChange("activa")}
-							>
-								<Icon icon="lucide:play-circle" className="mr-2 h-4 w-4" />
-								Activar
-							</Button>
-							<Button
-								variant="outline"
-								className="border-blue-300 text-blue-600 hover:bg-blue-50"
-							>
-								<Icon icon="lucide:credit-card" className="mr-2 h-4 w-4" />
-								Registrar Pago
-							</Button>
-						</>
-					)}
-					{subscription.estado === "cancelada" && (
-						<Button
-							variant="outline"
-							className="border-green-300 text-green-600 hover:bg-green-50"
-							onClick={() => handleStatusChange("activa")}
-						>
-							<Icon icon="lucide:refresh-cw" className="mr-2 h-4 w-4" />
-							Reactivar Suscripción
-						</Button>
-					)}
-					{subscription.estado !== "cancelada" && (
-						<Button
-							variant="outline"
-							className="border-red-300 text-red-600 hover:bg-red-50"
-							onClick={() => handleStatusChange("cancelada")}
-						>
-							<Icon icon="lucide:x-circle" className="mr-2 h-4 w-4" />
-							Cancelar Suscripción
-						</Button>
-					)}
-					<Button
-						variant="outline"
-						onClick={handleSendReminder}
-						disabled={isSendingReminder}
-					>
-						{isSendingReminder ? (
-							<Icon icon="lucide:loader-2" className="mr-2 h-4 w-4 animate-spin" />
-						) : (
-							<Icon icon="lucide:mail" className="mr-2 h-4 w-4" />
-						)}
-						{isSendingReminder
-							? t("subscriptions.detail.sendingReminder", "Enviando...")
-							: t("subscriptions.detail.sendReminder", "Enviar Recordatorio")}
-					</Button>
-					<Button variant="outline" onClick={() => setIsInvoiceModalOpen(true)}>
-						<Icon icon="lucide:file-text" className="mr-2 h-4 w-4" />
-						Generar Factura
-					</Button>
-				</div>
-			</div>
+			<SubscriptionTransactionsTable
+				transactions={transactions}
+				isLoading={isLoadingTransactions}
+				error={transactionsError ?? null}
+				page={transactionsPage}
+				totalPages={transactionsTotalPages}
+				total={transactionsTotal}
+				limit={transactionsLimit}
+				onRetry={() => loadTransactions(transactionsPage)}
+				onPageChange={setTransactionsPage}
+				onSelectTransaction={setSelectedTransaction}
+				defaultMoneda={subscription.moneda}
+			/>
 
 			{/* Modal para cambiar plan */}
 			<ModalChangePlan
@@ -936,13 +722,6 @@ export function SubscriptionDetailPage() {
 				subscription={subscription}
 				plans={plans}
 				isLoading={isLoadingPlans}
-			/>
-
-			{/* Modal para generar factura */}
-			<ModalGenerateInvoice
-				isOpen={isInvoiceModalOpen}
-				onClose={() => setIsInvoiceModalOpen(false)}
-				subscription={subscription}
 			/>
 
 			{/* Modal para renovar suscripción */}

@@ -14,9 +14,6 @@ export class RenewSubscriptionUseCaseImpl implements RenewSubscriptionUseCase {
 			throw new Error("El ID de la suscripción es requerido");
 		}
 
-		if (!data.meses || data.meses <= 0) {
-			throw new Error("La cantidad de meses debe ser mayor a 0");
-		}
 
 		if (!data.pago) {
 			throw new Error("La información de pago es requerida");

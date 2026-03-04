@@ -70,7 +70,17 @@ export function ModalTransactionDetail({
 }: ModalTransactionDetailProps) {
 	if (!transaction) return null;
 
-	const isApproved = transaction.estado === "aprobada";
+	const estadoLower = transaction.estado?.toLowerCase();
+	const isApproved = estadoLower === "aprobada";
+	const isRejected = estadoLower === "rechazada" || estadoLower === "fallida";
+	const isPending = estadoLower === "pendiente";
+	const estadoBadgeClass = isApproved
+		? "bg-green-100 text-green-700 border-green-200"
+		: isRejected
+			? "bg-red-100 text-red-700 border-red-200"
+			: isPending
+				? "bg-orange-100 text-orange-700 border-orange-200"
+				: "bg-gray-100 text-gray-700 border-gray-200";
 
 	const billingPeriodLabel = transaction.billingPeriod === "annual" ? "Anual" : transaction.billingPeriod === "monthly" ? "Mensual" : transaction.billingPeriod;
 
@@ -97,12 +107,7 @@ export function ModalTransactionDetail({
 						<span className="text-sm text-muted-foreground">Estado</span>
 						<Badge
 							variant="outline"
-							className={cn(
-								"text-sm px-3 py-1",
-								isApproved
-									? "bg-green-100 text-green-700 border-green-200"
-									: "bg-gray-100 text-gray-700 border-gray-200"
-							)}
+							className={cn("text-sm px-3 py-1", estadoBadgeClass)}
 						>
 							{isApproved && (
 								<Icon icon="lucide:check-circle" className="mr-1.5 h-3.5 w-3.5" />
@@ -186,6 +191,20 @@ export function ModalTransactionDetail({
 								icon="lucide:credit-card"
 								value={metodoPagoLabels[transaction.metodoPago] ?? transaction.metodoPago}
 							/>
+							{transaction.factura && (
+								<DetailRow
+									label="Factura"
+									icon="lucide:file-digit"
+									value={transaction.factura}
+								/>
+							)}
+							{transaction.bancoNombre && (
+								<DetailRow
+									label="Banco"
+									icon="lucide:building"
+									value={transaction.bancoNombre}
+								/>
+							)}
 							<DetailRow
 								label="ID Transacción"
 								icon="lucide:hash"
@@ -214,6 +233,38 @@ export function ModalTransactionDetail({
 							/>
 						</div>
 					</div>
+
+					{/* Código y mensaje de respuesta (pasarela) */}
+					{(transaction.codigoRespuesta ?? transaction.mensajeRespuesta ?? transaction.codigoAprobacion) && (
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+								Respuesta pasarela
+							</p>
+							<div className="rounded-lg border px-4">
+								{transaction.codigoRespuesta && (
+									<DetailRow
+										label="Código respuesta"
+										icon="lucide:code"
+										value={<span className="font-mono text-xs">{transaction.codigoRespuesta}</span>}
+									/>
+								)}
+								{transaction.mensajeRespuesta && (
+									<DetailRow
+										label="Mensaje respuesta"
+										icon="lucide:message-square"
+										value={transaction.mensajeRespuesta}
+									/>
+								)}
+								{transaction.codigoAprobacion && (
+									<DetailRow
+										label="Código aprobación"
+										icon="lucide:check-circle"
+										value={<span className="font-mono text-xs">{transaction.codigoAprobacion}</span>}
+									/>
+								)}
+							</div>
+						</div>
+					)}
 
 					{/* Período de la suscripción */}
 					{(transaction.periodoFechaInicio || transaction.periodoFechaFin) && (
@@ -261,6 +312,13 @@ export function ModalTransactionDetail({
 							Fechas
 						</p>
 						<div className="rounded-lg border px-4">
+							{transaction.fechaTransaccion && (
+								<DetailRow
+									label="Fecha transacción"
+									icon="lucide:calendar-check"
+									value={formatDate(transaction.fechaTransaccion)}
+								/>
+							)}
 							<DetailRow
 								label="Creada"
 								icon="lucide:calendar"
@@ -273,6 +331,28 @@ export function ModalTransactionDetail({
 							/>
 						</div>
 					</div>
+
+					{/* Datos adicionales (pasarela) */}
+					{transaction.datosAdicionales && Object.keys(transaction.datosAdicionales).length > 0 && (
+						<div>
+							<p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+								Datos adicionales (pasarela)
+							</p>
+							<div className="rounded-lg border px-4 py-2 max-h-48 overflow-y-auto">
+								{Object.entries(transaction.datosAdicionales).map(
+									([key, val]) =>
+										val != null &&
+										val !== "" && (
+											<DetailRow
+												key={key}
+												label={key.replace(/^x_/, "").replace(/_/g, " ")}
+												value={<span className="font-mono text-xs break-all">{String(val)}</span>}
+											/>
+										)
+								)}
+							</div>
+						</div>
+					)}
 
 					{/* IDs técnicos */}
 					<div>
