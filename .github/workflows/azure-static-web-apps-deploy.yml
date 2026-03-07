@@ -1,14 +1,12 @@
-name: Azure Static Web Apps - Build and Deploy TEST
+name: Azure Static Web Apps - Build and Deploy PDN
 
 on:
   push:
     branches:
-      - main
-      - test
+      - production
   pull_request:
     branches:
-      - main
-      - test
+      - production
 
 jobs:
   build_and_deploy:
@@ -45,7 +43,7 @@ jobs:
         run: pnpm build
         env:
           NODE_ENV: production
-          VITE_APP_API_BASE_URL: https://netvozposapitest-fdhfeaekhthge8eh.eastus-01.azurewebsites.net/api/v1
+          VITE_APP_API_BASE_URL: https://netvozposapi-h7cfa2gyfzcafpa7.eastus-01.azurewebsites.net/api/v1
           VITE_APP_DIAN_API_URL: https://dianapi.netvozpos.com
           VITE_APP_ENABLE_MOCK: false
           VITE_APP_PUBLIC_PATH: /
@@ -69,7 +67,7 @@ jobs:
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_CALM_ISLAND_0EB2FDF0F }}
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_AMBITIOUS_RIVER_02C19910F }}
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           action: "upload"
           app_location: "dist"
@@ -79,4 +77,4 @@ jobs:
       - name: Deployment complete
         run: |
           echo "✓ Deployment successful!"
-          echo "URL: https://calm-island-0eb2fdf0f.6.azurestaticapps.net"
+          echo "URL: https://ambitious-river-02c19910f.2.azurestaticapps.net"
