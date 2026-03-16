@@ -148,7 +148,7 @@ function PaymentListItemComponent({ item, onClick }: { item: PaymentEntity; onCl
 			onClick={onClick}
 		>
 			<div>
-				<p className="font-medium text-sm">{item.negocioNombre || item.negocioId || "—"}</p>
+				<p className="font-medium text-sm">{item.descripcion || item.negocioId || "—"}</p>
 				<p className="text-xs text-muted-foreground">{formatDate(item.fecha)}</p>
 			</div>
 			<div className="text-right">
