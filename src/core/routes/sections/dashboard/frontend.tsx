@@ -23,6 +23,10 @@ export function getFrontendDashboardRoutes(): RouteObject[] {
 			path: "payments",
 			element: Component("/features/payments/presentation/pages/PaymentsPage"),
 		},
+		{
+			path: "recommendations",
+			element: Component("/features/recommendations/presentation/pages/RecommendationsPage"),
+		},
 	];
 	return frontendDashboardRoutes;
 }
