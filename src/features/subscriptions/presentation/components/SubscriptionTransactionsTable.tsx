@@ -15,15 +15,19 @@ function formatCurrency(value: number | undefined | null, moneda: SubscriptionMo
 }
 
 function formatShortDate(dateString: string | undefined | null): string {
-	if (!dateString) return "-";
+	if (!dateString) return "—";
 	try {
-		return new Date(dateString).toLocaleDateString("es-CO", {
+		const d = new Date(dateString);
+		if (Number.isNaN(d.getTime())) return "—";
+		return d.toLocaleString("es-CO", {
 			year: "numeric",
 			month: "2-digit",
 			day: "2-digit",
+			hour: "2-digit",
+			minute: "2-digit",
 		});
 	} catch {
-		return "-";
+		return "—";
 	}
 }
 

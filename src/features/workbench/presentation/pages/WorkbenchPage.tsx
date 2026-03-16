@@ -1,8 +1,13 @@
 import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { Icon } from "@/components/icon";
 import { Button } from "@/core/ui/button";
 import { cn } from "@/core/utils";
+import { container } from "@/core/di/DIContainer";
+import { PAYMENT_TOKENS } from "@/features/payments/di/payments.container.config";
+import type { GetPaymentsUseCase } from "@/features/payments/domain/usecases";
+import type { PaymentEntity } from "@/features/payments/domain/entities/PaymentEntity";
 import { useWorkbench } from "../hooks/useWorkbench";
 import type { RecentSubscription, WorkbenchKPIs } from "../../domain/entities/WorkbenchEntity";
 
@@ -118,6 +123,12 @@ function StatCardComponent({ stat, onClick }: { stat: StatCard; onClick?: () => 
 	);
 }
 
+const paymentStatusConfig: Record<string, { label: string; color: string; bg: string }> = {
+	exitoso: { label: "Exitoso", color: "text-green-600", bg: "bg-green-100" },
+	pendiente: { label: "Pendiente", color: "text-orange-600", bg: "bg-orange-100" },
+	fallido: { label: "Fallido", color: "text-red-600", bg: "bg-red-100" },
+};
+
 const subscriptionStatusConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
 	activa: { label: "Activa", color: "text-green-600", bg: "bg-green-100", icon: "lucide:check-circle" },
 	suspendida: { label: "Suspendida", color: "text-gray-600", bg: "bg-gray-100", icon: "lucide:pause-circle" },
@@ -125,6 +136,28 @@ const subscriptionStatusConfig: Record<string, { label: string; color: string; b
 	vencida: { label: "Vencida", color: "text-red-600", bg: "bg-red-100", icon: "lucide:alert-circle" },
 	pendiente_pago: { label: "Pendiente", color: "text-orange-600", bg: "bg-orange-100", icon: "lucide:clock" },
 };
+
+function PaymentListItemComponent({ item, onClick }: { item: PaymentEntity; onClick?: () => void }) {
+	const status = paymentStatusConfig[item.estado] || paymentStatusConfig.exitoso;
+	return (
+		<div
+			className={cn(
+				"flex items-center justify-between py-3 border-b last:border-b-0",
+				onClick && "cursor-pointer hover:bg-muted/50 transition-colors rounded-lg px-2 -mx-2"
+			)}
+			onClick={onClick}
+		>
+			<div>
+				<p className="font-medium text-sm">{item.negocioNombre || item.negocioId || "—"}</p>
+				<p className="text-xs text-muted-foreground">{formatDate(item.fecha)}</p>
+			</div>
+			<div className="text-right">
+				<p className="font-semibold text-sm">{formatCurrencyShort(item.monto)}</p>
+				<span className={cn("text-xs font-medium px-2 py-0.5 rounded", status.bg, status.color)}>{status.label}</span>
+			</div>
+		</div>
+	);
+}
 
 function SubscriptionListItemComponent({ item, onClick }: { item: RecentSubscription; onClick?: () => void }) {
 	const status = subscriptionStatusConfig[item.estado] || subscriptionStatusConfig.activa;
@@ -200,6 +233,16 @@ export function WorkbenchPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const { data: workbenchData, isLoading, error, refetch, isRefetching } = useWorkbench();
+
+	const { data: recentPaymentsData } = useQuery({
+		queryKey: ["workbench", "recentPayments"],
+		queryFn: async () => {
+			const useCase = container.get<GetPaymentsUseCase>(PAYMENT_TOKENS.GetPaymentsUseCase);
+			return useCase.execute({ page: 1, pageSize: 5, rango: "ultimos_7_dias" });
+		},
+		staleTime: 2 * 60 * 1000,
+	});
+	const recentPayments = recentPaymentsData?.data ?? [];
 
 
 	// Build metric cards from KPIs
@@ -395,6 +438,35 @@ export function WorkbenchPage() {
 						</div>
 					)}
 				</div>
+			</div>
+
+			{/* Últimos pagos (transacciones) */}
+			<div className="bg-card rounded-xl border p-5">
+				<div className="flex items-center justify-between mb-4">
+					<div className="flex items-center gap-2">
+						<span className="w-2 h-2 rounded-full bg-emerald-500" />
+						<h2 className="font-semibold text-sm uppercase tracking-wide">Últimos pagos (7 días)</h2>
+					</div>
+					<Button variant="ghost" size="sm" onClick={() => navigate("/payments")}>
+						<Icon icon="lucide:chevron-right" className="h-4 w-4" />
+					</Button>
+				</div>
+				{recentPayments.length > 0 ? (
+					<div>
+						{recentPayments.map((item) => (
+							<PaymentListItemComponent
+								key={item.id}
+								item={item}
+								onClick={() => navigate("/payments")}
+							/>
+						))}
+					</div>
+				) : (
+					<div className="text-center py-6 text-muted-foreground">
+						<Icon icon="lucide:credit-card" size={32} className="mx-auto mb-2 opacity-50" />
+						<p className="text-sm">Sin transacciones en los últimos 7 días</p>
+					</div>
+				)}
 			</div>
 		</div>
 	);
