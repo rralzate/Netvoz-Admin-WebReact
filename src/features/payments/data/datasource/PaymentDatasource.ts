@@ -37,10 +37,17 @@ interface ApiTransactionItem {
 	id: string;
 	negocioId: string;
 	valor: number;
+	moneda?: string;
 	estado: string;
 	metodoPago?: string;
 	transaccionId?: string;
 	referencia?: string;
+	descripcion?: string;
+	planName?: string;
+	clienteNombre?: string;
+	clienteEmail?: string;
+	codigoRespuesta?: string;
+	mensajeRespuesta?: string;
 	createdAt?: string;
 	fechaTransaccion?: string;
 	nombreNegocio?: string;
@@ -54,9 +61,17 @@ function mapApiTransactionToPayment(item: ApiTransactionItem): PaymentEntity {
 		fecha,
 		negocioId: item.negocioId || "",
 		negocioNombre: (item.nombreNegocio as string) || item.negocioId || "",
-		monto: Number(item.valor) || 0,
+		monto: Number(item.valor) ?? 0,
+		moneda: (item.moneda as string) || undefined,
 		metodo: mapApiMetodoToPaymentMethod(item.metodoPago || ""),
 		transaccionId: item.transaccionId || item.referencia || item.id,
+		referencia: (item.referencia as string) || undefined,
+		descripcion: (item.descripcion as string) || undefined,
+		planName: (item.planName as string) || undefined,
+		clienteNombre: (item.clienteNombre as string) || undefined,
+		clienteEmail: (item.clienteEmail as string) || undefined,
+		codigoRespuesta: (item.codigoRespuesta as string) || undefined,
+		mensajeRespuesta: (item.mensajeRespuesta as string) || undefined,
 		estado: mapApiEstadoToPaymentStatus(item.estado),
 	};
 }

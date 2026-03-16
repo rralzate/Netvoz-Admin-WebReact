@@ -237,7 +237,7 @@ export function PaymentsPage() {
 									{t("payments.table.date")}
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-									{t("payments.table.business")}
+									Descripción
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
 									{t("payments.table.amount")}
@@ -246,18 +246,23 @@ export function PaymentsPage() {
 									{t("payments.table.method")}
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-									{t("payments.table.transaction")}
+									Referencia / Transacción
+								</th>
+								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+									Plan
+								</th>
+								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+									Cliente
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
 									{t("payments.table.status")}
 								</th>
-
 							</tr>
 						</thead>
 						<tbody>
 							{loading ? (
 								<tr>
-									<td colSpan={7} className="p-8 text-center">
+									<td colSpan={9} className="p-8 text-center">
 										<Icon
 											icon="lucide:loader-2"
 											className="animate-spin mx-auto"
@@ -268,7 +273,7 @@ export function PaymentsPage() {
 							) : payments.length === 0 ? (
 								<tr>
 									<td
-										colSpan={7}
+										colSpan={9}
 										className="p-8 text-center text-muted-foreground"
 									>
 										{t("payments.noPayments")}
@@ -280,25 +285,30 @@ export function PaymentsPage() {
 										key={payment.id}
 										className="border-b last:border-b-0 hover:bg-muted/20"
 									>
-										<td className="p-4 text-sm">
+										<td className="p-4 text-sm whitespace-nowrap">
 											{formatDate(payment.fecha)}
 										</td>
-										<td className="p-4 text-sm font-medium">
-											{payment.negocioNombre}
+										<td className="p-4 text-sm text-muted-foreground max-w-[200px] truncate" title={payment.descripcion}>
+											{payment.descripcion || "—"}
 										</td>
-										<td className="p-4 text-sm font-semibold">
+										<td className="p-4 text-sm font-semibold whitespace-nowrap">
 											{formatCurrency(payment.monto)}
 										</td>
 										<td className="p-4 text-sm">
 											{getMethodLabel(payment.metodo)}
 										</td>
 										<td className="p-4 text-sm text-muted-foreground">
-											{payment.transaccionId}
+											{payment.referencia || payment.transaccionId || "—"}
+										</td>
+										<td className="p-4 text-sm">
+											{payment.planName || "—"}
+										</td>
+										<td className="p-4 text-sm">
+											{payment.clienteNombre || payment.clienteEmail || "—"}
 										</td>
 										<td className="p-4">
 											<StatusBadge status={payment.estado} />
 										</td>
-
 									</tr>
 								))
 							)}
