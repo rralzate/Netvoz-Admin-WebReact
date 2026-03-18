@@ -13,6 +13,7 @@ export class PaymentRepositoryImpl implements PaymentRepository {
 		status?: PaymentStatus;
 		page?: number;
 		pageSize?: number;
+		rango?: string;
 	}): Promise<PaymentListResponse> {
 		return this.datasource.getAll(filters);
 	}
