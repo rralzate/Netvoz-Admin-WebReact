@@ -130,6 +130,12 @@ export default {
 		subscriptions: "Subscriptions",
 		plans: "Plans",
 		payments: "Payments",
+		recommendations: "Recommendations",
+	},
+	recommendations: {
+		title: "Recommendations",
+		description: "Track invitations (Refer and earn). Contact the invitee and update status.",
+		empty: "No recommendations with this filter.",
 	},
 	subscriptions: {
 		title: "Subscriptions",

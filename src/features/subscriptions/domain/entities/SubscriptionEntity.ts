@@ -26,16 +26,33 @@ export interface SubscriptionHistorialPago {
 	comprobanteUrl?: string;
 }
 
-// Límites actuales de la suscripción
+// Límites actuales de la suscripción (API puede enviar cajasRegistradorasActivas)
 export interface SubscriptionLimitesActuales {
-	maxUsuarios: number;
-	maxProductos: number;
-	maxFacturasPorMes: number;
-	maxCajasRegistradoras: number;
-	usuariosActivos: number;
-	productosCreados: number;
-	facturasDelMes: number;
-	cajasActivas: number;
+	maxUsuarios?: number;
+	maxProductos?: number;
+	maxFacturasPorMes?: number;
+	maxCajasRegistradoras?: number;
+	usuariosActivos?: number;
+	productosCreados?: number;
+	facturasDelMes?: number;
+	cajasActivas?: number;
+	cajasRegistradorasActivas?: number;
+}
+
+// Datos de facturación del negocio (API)
+export interface SubscriptionDatosFacturacion {
+	name?: string;
+	last_name?: string;
+	email?: string;
+	doc_type?: string;
+	doc_number?: string;
+	type_person?: string;
+	city?: string;
+	address?: string;
+	phone?: string;
+	cell_phone?: string;
+	id?: string;
+	_id?: string;
 }
 
 // Estado de la suscripción
@@ -72,8 +89,10 @@ export interface SubscriptionEntity {
 	createdAt?: string;
 	active?: boolean;
 	updatedAt?: string;
-	nit: string;
-	cedula: string
+	nit?: string;
+	cedula?: string;
+	epaycoCustomerId?: string;
+	datosFacturacion?: SubscriptionDatosFacturacion;
 }
 
 // Respuesta de lista

@@ -130,6 +130,12 @@ export default {
 		subscriptions: "Suscripciones",
 		plans: "Planes",
 		payments: "Pagos",
+		recommendations: "Recomendaciones",
+	},
+	recommendations: {
+		title: "Recomendaciones",
+		description: "Seguimiento de invitaciones (Recomienda y gana). Contacta al invitado y actualiza el estado.",
+		empty: "No hay recomendaciones con este filtro.",
 	},
 	subscriptions: {
 		title: "Suscripciones",
