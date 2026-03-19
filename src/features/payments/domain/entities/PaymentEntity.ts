@@ -8,8 +8,16 @@ export interface PaymentEntity {
 	negocioId: string;
 	negocioNombre: string;
 	monto: number;
+	moneda?: string;
 	metodo: PaymentMethod;
 	transaccionId: string;
+	referencia?: string;
+	descripcion?: string;
+	planName?: string;
+	clienteNombre?: string;
+	clienteEmail?: string;
+	codigoRespuesta?: string;
+	mensajeRespuesta?: string;
 	estado: PaymentStatus;
 }
 

@@ -4,15 +4,18 @@ import type { WorkbenchKPIs, SubscriptionSummary, RecentSubscription, ObjetivosC
 import { urlsWorkbench } from "./constants";
 import type { WorkbenchDataSource } from "./WorkbenchDataSource";
 
-interface RevenueByDay {
-	orderCount: number;
-	date: string;
-	revenue: number;
-	averageOrderValue: number;
-}
-
 interface SubscriptionApiResponse {
 	data: SubscriptionEntity[];
+}
+
+// Item crudo de GET /epayco/transactions/all (solo campos usados para KPIs)
+interface ApiTransactionItem {
+	id: string;
+	valor: number;
+	estado: string;
+	fechaTransaccion?: string;
+	createdAt?: string;
+	[key: string]: unknown;
 }
 
 // Default objectives if none are configured
@@ -62,52 +65,55 @@ export class WorkbenchDataSourceImpl implements WorkbenchDataSource {
 		}
 	}
 
+	/**
+	 * Obtiene KPIs (Facturado hoy, Últimos 7 días, Últimos 30 días) a partir de las
+	 * transacciones ePayco aprobadas (GET /epayco/transactions/all).
+	 */
 	async getKPIs(objetivos?: ObjetivosConfig): Promise<WorkbenchKPIs> {
+		const objectives = objetivos || DEFAULT_OBJECTIVES;
+
 		try {
-			// Use provided objectives or defaults
-			const objectives = objetivos || DEFAULT_OBJECTIVES;
-			console.log("📊 Using objectives:", objectives);
+			const allTransactions: ApiTransactionItem[] = [];
+			let page = 1;
+			const limit = 100;
+			let totalPages = 1;
 
-			// Fetch revenue data from API
-			console.log("🔍 Fetching revenue last 7 days from:", urlsWorkbench.getRevenueLast7Days);
-			const revenueLast7DaysResponse = await apiClient.get<any>({
-				url: urlsWorkbench.getRevenueLast7Days,
-			});
-			console.log("📊 Revenue Last 7 Days Response:", revenueLast7DaysResponse);
+			do {
+				const response = await apiClient.get<{ data: ApiTransactionItem[]; total: number; page: number; totalPages: number }>({
+					url: urlsWorkbench.transactionsAll,
+					config: { params: { page, limit, rango: "ultimos_30_dias" } },
+				});
+				const data = Array.isArray(response?.data) ? response.data : [];
+				allTransactions.push(...data);
+				totalPages = response?.totalPages ?? 1;
+				page++;
+			} while (page <= totalPages);
 
-			// Fetch total revenue (last 30 days)
-			const today = new Date();
-			const last30DaysStart = new Date(today);
-			last30DaysStart.setDate(today.getDate() - 30);
-			last30DaysStart.setHours(0, 0, 0, 0);
-			const last30DaysEnd = new Date(today);
-			last30DaysEnd.setHours(23, 59, 59, 999);
+			const todayStart = new Date();
+			todayStart.setHours(0, 0, 0, 0);
+			const todayEnd = new Date();
+			todayEnd.setHours(23, 59, 59, 999);
+			const sevenDaysAgo = new Date(todayStart);
+			sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-			console.log("🔍 Fetching total revenue from:", urlsWorkbench.getTotalRevenue);
-			const totalRevenueResponse = await apiClient.get<any>({
-				url: urlsWorkbench.getTotalRevenue,
-				config: {
-					params: {
-						startDate: last30DaysStart.toISOString(),
-						endDate: last30DaysEnd.toISOString(),
-					},
-				},
-			});
-			console.log("📊 Total Revenue Response:", totalRevenueResponse);
+			let todayRevenue = 0;
+			let weekRevenue = 0;
+			let monthRevenue = 0;
 
-			// Extract data from responses
-			const revenueLast7Days: RevenueByDay[] = revenueLast7DaysResponse?.data || revenueLast7DaysResponse || [];
-			const totalRevenue: number = totalRevenueResponse?.data || totalRevenueResponse || 0;
-
-			console.log("📈 Parsed Revenue Last 7 Days:", revenueLast7Days);
-			console.log("📈 Parsed Total Revenue:", totalRevenue);
-
-			// Calculate KPIs from API data
-			const todayRevenue = revenueLast7Days.length > 0
-				? revenueLast7Days[revenueLast7Days.length - 1]?.revenue || 0
-				: 0;
-			const weekRevenue = revenueLast7Days.reduce((sum, day) => sum + (day.revenue || 0), 0);
-			const monthRevenue = typeof totalRevenue === 'number' ? totalRevenue : 0;
+			for (const t of allTransactions) {
+				const estado = (t.estado || "").toLowerCase();
+				if (estado !== "aprobada") continue;
+				const valor = Number(t.valor) || 0;
+				const dateStr = t.fechaTransaccion || t.createdAt;
+				if (!dateStr) {
+					monthRevenue += valor;
+					continue;
+				}
+				const date = new Date(dateStr);
+				monthRevenue += valor;
+				if (date >= sevenDaysAgo) weekRevenue += valor;
+				if (date >= todayStart && date <= todayEnd) todayRevenue += valor;
+			}
 
 			const kpis: WorkbenchKPIs = {
 				facturadoHoy: {
@@ -126,13 +132,9 @@ export class WorkbenchDataSourceImpl implements WorkbenchDataSource {
 					percentage: objectives.ultimos30Dias > 0 ? Math.min((monthRevenue / objectives.ultimos30Dias) * 100, 100) : 0,
 				},
 			};
-
-			console.log("✅ Calculated KPIs:", kpis);
 			return kpis;
 		} catch (error) {
-			console.error("❌ Error fetching KPIs from API:", error);
-			// Return empty KPIs on error with default objectives
-			const objectives = objetivos || DEFAULT_OBJECTIVES;
+			console.error("❌ Error fetching KPIs from transactions:", error);
 			return {
 				facturadoHoy: { amount: 0, objective: objectives.facturadoHoy, percentage: 0 },
 				ultimos7Dias: { amount: 0, objective: objectives.ultimos7Dias, percentage: 0 },
