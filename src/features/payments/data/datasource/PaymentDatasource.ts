@@ -134,17 +134,17 @@ export class PaymentDatasourceImpl implements PaymentDatasource {
 		};
 	}
 
-	async getById(id: string): Promise<PaymentEntity> {
+	async getById(_id: string): Promise<PaymentEntity> {
 		// Opcional: GET /epayco/transactions/:id si el backend lo expone
 		throw new Error("getById no implementado para transacciones admin");
 	}
 
-	async retry(id: string): Promise<PaymentEntity> {
+	async retry(_id: string): Promise<PaymentEntity> {
 		// Opcional: endpoint de reintento si existe
 		throw new Error("retry no implementado para transacciones admin");
 	}
 
-	async confirm(id: string): Promise<PaymentEntity> {
+	async confirm(_id: string): Promise<PaymentEntity> {
 		// Opcional: endpoint de confirmación si existe
 		throw new Error("confirm no implementado para transacciones admin");
 	}

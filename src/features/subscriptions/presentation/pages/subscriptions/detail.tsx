@@ -138,7 +138,6 @@ export function SubscriptionDetailPage() {
 	const {
 		businessInfo,
 		isLoading: isLoadingBusinessInfo,
-		error: businessInfoError,
 		fetchBusinessInfo,
 		sendReminderEmail,
 		isSendingReminder,
