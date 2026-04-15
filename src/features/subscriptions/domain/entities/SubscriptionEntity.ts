@@ -26,16 +26,33 @@ export interface SubscriptionHistorialPago {
 	comprobanteUrl?: string;
 }
 
-// Límites actuales de la suscripción
+// Límites actuales de la suscripción (API puede enviar cajasRegistradorasActivas)
 export interface SubscriptionLimitesActuales {
-	maxUsuarios: number;
-	maxProductos: number;
-	maxFacturasPorMes: number;
-	maxCajasRegistradoras: number;
-	usuariosActivos: number;
-	productosCreados: number;
-	facturasDelMes: number;
-	cajasActivas: number;
+	maxUsuarios?: number;
+	maxProductos?: number;
+	maxFacturasPorMes?: number;
+	maxCajasRegistradoras?: number;
+	usuariosActivos?: number;
+	productosCreados?: number;
+	facturasDelMes?: number;
+	cajasActivas?: number;
+	cajasRegistradorasActivas?: number;
+}
+
+// Datos de facturación del negocio (API)
+export interface SubscriptionDatosFacturacion {
+	name?: string;
+	last_name?: string;
+	email?: string;
+	doc_type?: string;
+	doc_number?: string;
+	type_person?: string;
+	city?: string;
+	address?: string;
+	phone?: string;
+	cell_phone?: string;
+	id?: string;
+	_id?: string;
 }
 
 // Estado de la suscripción
@@ -72,8 +89,10 @@ export interface SubscriptionEntity {
 	createdAt?: string;
 	active?: boolean;
 	updatedAt?: string;
-	nit: string;
-	cedula: string
+	nit?: string;
+	cedula?: string;
+	epaycoCustomerId?: string;
+	datosFacturacion?: SubscriptionDatosFacturacion;
 }
 
 // Respuesta de lista
@@ -189,43 +208,49 @@ export const SubscriptionHelpers = {
 	porcentajeUsoUsuarios(subscription: SubscriptionEntity): number {
 		const { limitesActuales } = subscription;
 		if (!limitesActuales) return 0;
-		return Math.min(
-			(limitesActuales.usuariosActivos / limitesActuales.maxUsuarios) * 100,
-			100
-		);
+		const actual = limitesActuales.usuariosActivos ?? 0;
+		const maximo = limitesActuales.maxUsuarios ?? 0;
+		if (maximo <= 0) return 0;
+		return Math.min((actual / maximo) * 100, 100);
 	},
 
 	porcentajeUsoProductos(subscription: SubscriptionEntity): number {
 		const { limitesActuales } = subscription;
 		if (!limitesActuales) return 0;
-		return Math.min(
-			(limitesActuales.productosCreados / limitesActuales.maxProductos) * 100,
-			100
-		);
+		const actual = limitesActuales.productosCreados ?? 0;
+		const maximo = limitesActuales.maxProductos ?? 0;
+		if (maximo <= 0) return 0;
+		return Math.min((actual / maximo) * 100, 100);
 	},
 
 	porcentajeUsoFacturas(subscription: SubscriptionEntity): number {
 		const { limitesActuales } = subscription;
 		if (!limitesActuales) return 0;
-		return Math.min(
-			(limitesActuales.facturasDelMes / limitesActuales.maxFacturasPorMes) * 100,
-			100
-		);
+		const actual = limitesActuales.facturasDelMes ?? 0;
+		const maximo = limitesActuales.maxFacturasPorMes ?? 0;
+		if (maximo <= 0) return 0;
+		return Math.min((actual / maximo) * 100, 100);
 	},
 
 	puedeCrearUsuario(subscription: SubscriptionEntity): boolean {
-		if (!subscription.limitesActuales) return true;
-		return subscription.limitesActuales.usuariosActivos < subscription.limitesActuales.maxUsuarios;
+		const l = subscription.limitesActuales;
+		if (!l) return true;
+		if (l.maxUsuarios == null) return true;
+		return (l.usuariosActivos ?? 0) < l.maxUsuarios;
 	},
 
 	puedeCrearProducto(subscription: SubscriptionEntity): boolean {
-		if (!subscription.limitesActuales) return true;
-		return subscription.limitesActuales.productosCreados < subscription.limitesActuales.maxProductos;
+		const l = subscription.limitesActuales;
+		if (!l) return true;
+		if (l.maxProductos == null) return true;
+		return (l.productosCreados ?? 0) < l.maxProductos;
 	},
 
 	puedeCrearFactura(subscription: SubscriptionEntity): boolean {
-		if (!subscription.limitesActuales) return true;
-		return subscription.limitesActuales.facturasDelMes < subscription.limitesActuales.maxFacturasPorMes;
+		const l = subscription.limitesActuales;
+		if (!l) return true;
+		if (l.maxFacturasPorMes == null) return true;
+		return (l.facturasDelMes ?? 0) < l.maxFacturasPorMes;
 	},
 
 	obtenerUltimoPago(subscription: SubscriptionEntity): SubscriptionHistorialPago | undefined {
@@ -266,21 +291,22 @@ export const SubscriptionHelpers = {
 		productos: { actual: number; maximo: number; porcentaje: number };
 		facturas: { actual: number; maximo: number; porcentaje: number };
 	} | null {
-		if (!subscription.limitesActuales) return null;
+		const la = subscription.limitesActuales;
+		if (!la) return null;
 		return {
 			usuarios: {
-				actual: subscription.limitesActuales.usuariosActivos,
-				maximo: subscription.limitesActuales.maxUsuarios,
+				actual: la.usuariosActivos ?? 0,
+				maximo: la.maxUsuarios ?? 0,
 				porcentaje: SubscriptionHelpers.porcentajeUsoUsuarios(subscription),
 			},
 			productos: {
-				actual: subscription.limitesActuales.productosCreados,
-				maximo: subscription.limitesActuales.maxProductos,
+				actual: la.productosCreados ?? 0,
+				maximo: la.maxProductos ?? 0,
 				porcentaje: SubscriptionHelpers.porcentajeUsoProductos(subscription),
 			},
 			facturas: {
-				actual: subscription.limitesActuales.facturasDelMes,
-				maximo: subscription.limitesActuales.maxFacturasPorMes,
+				actual: la.facturasDelMes ?? 0,
+				maximo: la.maxFacturasPorMes ?? 0,
 				porcentaje: SubscriptionHelpers.porcentajeUsoFacturas(subscription),
 			},
 		};

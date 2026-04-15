@@ -2,13 +2,13 @@ import type { PaymentListResponse, PaymentStatus } from "../entities/PaymentEnti
 import type { PaymentRepository } from "../repositories/PaymentRepository";
 
 export interface GetPaymentsUseCase {
-	execute(filters?: { status?: PaymentStatus; page?: number; pageSize?: number }): Promise<PaymentListResponse>;
+	execute(filters?: { status?: PaymentStatus; page?: number; pageSize?: number; rango?: string }): Promise<PaymentListResponse>;
 }
 
 export class GetPaymentsUseCaseImpl implements GetPaymentsUseCase {
 	constructor(private readonly repository: PaymentRepository) {}
 
-	async execute(filters?: { status?: PaymentStatus; page?: number; pageSize?: number }): Promise<PaymentListResponse> {
+	async execute(filters?: { status?: PaymentStatus; page?: number; pageSize?: number; rango?: string }): Promise<PaymentListResponse> {
 		return this.repository.getAll(filters);
 	}
 }

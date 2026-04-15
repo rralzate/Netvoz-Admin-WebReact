@@ -172,7 +172,11 @@ export function SubscriptionsPage() {
 								<td className="p-4">
 									<div>
 										<p className="font-medium">{subscription.nombreNegocio || "Sin nombre"}</p>
-										<p className="text-sm text-muted-foreground">ID: {subscription.negocioId}</p>
+										<p className="text-sm text-muted-foreground">
+											{subscription.datosFacturacion?.email
+												? subscription.datosFacturacion.email
+												: subscription.negocioId}
+										</p>
 									</div>
 								</td>
 								<td className="p-4">

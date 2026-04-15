@@ -134,7 +134,7 @@ export function SubscriptionDetailPage() {
 	// Get all plans for the change plan modal
 	const { plans, isLoading: isLoadingPlans } = usePlans();
 
-	// Get business info for resource usage and send reminder
+	// Consulta información del negocio por negocioId (uso y datos para recordatorio)
 	const {
 		businessInfo,
 		isLoading: isLoadingBusinessInfo,
@@ -174,18 +174,38 @@ export function SubscriptionDetailPage() {
 	// Get current plan to sync limits
 	const currentPlan = plans.find((p) => p.id === subscription?.planId);
 
-	// Get resource limits from plan with actual usage from business info
-	const resourceLimits = currentPlan?.caracteristicas
-		? {
-				maxUsuarios: currentPlan.caracteristicas.maxUsuarios ?? 0,
-				maxProductos: currentPlan.caracteristicas.maxProductos ?? 0,
-				maxCajasRegistradoras: currentPlan.caracteristicas.maxCajasRegistradoras ?? 0,
-				// Current usage values from business info API
-				usuariosActivos: businessInfo?.totalUsuarios ?? 0,
-				productosCreados: businessInfo?.totalProductos ?? 0,
-				cajasActivas: businessInfo?.totalCajasRegistradoras ?? 0,
-			}
-		: null;
+	// Get resource limits from plan with actual usage from business info o subscription.limitesActuales (API)
+	const limites = subscription?.limitesActuales;
+	const resourceLimits =
+		currentPlan?.caracteristicas || limites
+			? {
+					maxUsuarios:
+						currentPlan?.caracteristicas?.maxUsuarios ??
+						limites?.maxUsuarios ??
+						0,
+					maxProductos:
+						currentPlan?.caracteristicas?.maxProductos ??
+						limites?.maxProductos ??
+						0,
+					maxCajasRegistradoras:
+						currentPlan?.caracteristicas?.maxCajasRegistradoras ??
+						limites?.maxCajasRegistradoras ??
+						0,
+					usuariosActivos:
+						businessInfo?.totalUsuarios ??
+						limites?.usuariosActivos ??
+						0,
+					productosCreados:
+						businessInfo?.totalProductos ??
+						limites?.productosCreados ??
+						0,
+					cajasActivas:
+						businessInfo?.totalCajasRegistradoras ??
+						limites?.cajasRegistradorasActivas ??
+						limites?.cajasActivas ??
+						0,
+				}
+			: null;
 
 	// Handle status change
 	const handleStatusChange = async (newStatus: SubscriptionEstado) => {
@@ -418,8 +438,6 @@ export function SubscriptionDetailPage() {
 		);
 	}
 
-	console.log("suscripcion desde details", subscription)
-
 	const formatPaymentMethod = () => {
 		const { metodoPago } = subscription;
 		if (!metodoPago || !metodoPago.tipo) {
@@ -518,23 +536,14 @@ export function SubscriptionDetailPage() {
 						</Button>
 					)}
 					{(subscription.estado === "vencida" || subscription.estado === "pendiente_pago") && (
-						<>
-							<Button
-								variant="outline"
-								className="border-green-300 text-green-600 hover:bg-green-50"
-								onClick={() => handleStatusChange("activa")}
-							>
-								<Icon icon="lucide:play-circle" className="mr-2 h-4 w-4" />
-								Activar
-							</Button>
-							<Button
-								variant="outline"
-								className="border-blue-300 text-blue-600 hover:bg-blue-50"
-							>
-								<Icon icon="lucide:credit-card" className="mr-2 h-4 w-4" />
-								Registrar Pago
-							</Button>
-						</>
+						<Button
+							variant="outline"
+							className="border-green-300 text-green-600 hover:bg-green-50"
+							onClick={() => handleStatusChange("activa")}
+						>
+							<Icon icon="lucide:play-circle" className="mr-2 h-4 w-4" />
+							Activar
+						</Button>
 					)}
 					{subscription.estado === "cancelada" && (
 						<Button
@@ -672,9 +681,78 @@ export function SubscriptionDetailPage() {
 				</div>
 			</div>
 
-			
-
-			
+			{/* Datos del negocio y facturación (desde suscripción) */}
+			{(subscription.datosFacturacion || subscription.nombreNegocio) && (
+				<div className="bg-card rounded-lg border p-6 mb-6">
+					<h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+						Datos del negocio y facturación
+					</h3>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<div className="space-y-3">
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">Negocio</span>
+								<span className="font-medium">{subscription.nombreNegocio || "—"}</span>
+							</div>
+							<div className="flex justify-between">
+								<span className="text-muted-foreground">ID Negocio</span>
+								<span className="font-mono text-xs">{subscription.negocioId || "—"}</span>
+							</div>
+						</div>
+						{subscription.datosFacturacion && (
+							<div className="space-y-3 md:col-span-2 border-t pt-4">
+								<p className="text-xs font-medium text-muted-foreground uppercase mb-2">Contacto / Facturación</p>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+									{(subscription.datosFacturacion.name || subscription.datosFacturacion.last_name) && (
+										<div className="flex justify-between sm:block">
+											<span className="text-muted-foreground text-sm">Nombre</span>
+											<span className="font-medium text-sm">
+												{[subscription.datosFacturacion.name, subscription.datosFacturacion.last_name].filter(Boolean).join(" ")}
+											</span>
+										</div>
+									)}
+									{subscription.datosFacturacion.email && (
+										<div className="flex justify-between sm:block">
+											<span className="text-muted-foreground text-sm">Email</span>
+											<span className="font-medium text-sm">{subscription.datosFacturacion.email}</span>
+										</div>
+									)}
+									{(subscription.datosFacturacion.phone || subscription.datosFacturacion.cell_phone) && (
+										<div className="flex justify-between sm:block">
+											<span className="text-muted-foreground text-sm">Teléfono</span>
+											<span className="font-medium text-sm">
+												{subscription.datosFacturacion.phone || subscription.datosFacturacion.cell_phone}
+												{subscription.datosFacturacion.phone && subscription.datosFacturacion.cell_phone && subscription.datosFacturacion.phone !== subscription.datosFacturacion.cell_phone
+													? ` / ${subscription.datosFacturacion.cell_phone}`
+													: ""}
+											</span>
+										</div>
+									)}
+									{(subscription.datosFacturacion.doc_type || subscription.datosFacturacion.doc_number) && (
+										<div className="flex justify-between sm:block">
+											<span className="text-muted-foreground text-sm">Documento</span>
+											<span className="font-medium text-sm">
+												{subscription.datosFacturacion.doc_type || ""} {subscription.datosFacturacion.doc_number || ""}
+											</span>
+										</div>
+									)}
+									{subscription.datosFacturacion.city && (
+										<div className="flex justify-between sm:block">
+											<span className="text-muted-foreground text-sm">Ciudad</span>
+											<span className="font-medium text-sm">{subscription.datosFacturacion.city}</span>
+										</div>
+									)}
+									{subscription.datosFacturacion.address && (
+										<div className="flex justify-between sm:block sm:col-span-2">
+											<span className="text-muted-foreground text-sm">Dirección</span>
+											<span className="font-medium text-sm">{subscription.datosFacturacion.address}</span>
+										</div>
+									)}
+								</div>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
 
 			{/* Notes */}
 			{subscription.notas && (

@@ -22,7 +22,20 @@ function formatCurrency(value: number): string {
 }
 
 function formatDate(dateString: string): string {
-	return dateString;
+	if (!dateString) return "—";
+	try {
+		const d = new Date(dateString);
+		if (Number.isNaN(d.getTime())) return dateString;
+		return d.toLocaleString("es-CO", {
+			year: "numeric",
+			month: "2-digit",
+			day: "2-digit",
+			hour: "2-digit",
+			minute: "2-digit",
+		});
+	} catch {
+		return dateString;
+	}
 }
 
 function getMethodLabel(method: PaymentMethod): string {
@@ -94,56 +107,45 @@ function StatusBadge({ status }: StatusBadgeProps) {
 	);
 }
 
-interface PaymentActionsProps {
-	payment: PaymentEntity;
-	onConfirm: (id: string) => void;
-	onRetry: (id: string) => void;
-}
 
-function PaymentActions({ payment, onConfirm, onRetry }: PaymentActionsProps) {
-	if (payment.estado === "pendiente") {
-		return (
-			<Button
-				size="sm"
-				className="bg-primary hover:bg-primary/90 text-xs h-7"
-				onClick={() => onConfirm(payment.id)}
-			>
-				Confirmar
-			</Button>
-		);
-	}
 
-	if (payment.estado === "fallido") {
-		return (
-			<Button
-				variant="outline"
-				size="sm"
-				className="text-xs h-7"
-				onClick={() => onRetry(payment.id)}
-			>
-				Reintentar
-			</Button>
-		);
-	}
 
-	return null;
-}
+const PAGE_SIZE = 10;
+const RANGO_OPTIONS = [
+	{ value: "", label: "Todos" },
+	{ value: "hoy", label: "Hoy" },
+	{ value: "esta_semana", label: "Esta semana" },
+	{ value: "este_mes", label: "Este mes" },
+	{ value: "ultimos_7_dias", label: "Últimos 7 días" },
+	{ value: "ultimos_30_dias", label: "Últimos 30 días" },
+] as const;
 
 export function PaymentsPage() {
 	const { t } = useTranslation();
 	const [payments, setPayments] = useState<PaymentEntity[]>([]);
 	const [stats, setStats] = useState<PaymentStats | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [page, setPage] = useState(1);
+	const [total, setTotal] = useState(0);
+	const [rango, setRango] = useState("");
+	const [statusFilter, setStatusFilter] = useState<PaymentStatus | undefined>(undefined);
 
-	const loadPayments = async () => {
+	const loadPayments = async (pageNum?: number) => {
 		try {
 			setLoading(true);
 			const useCase = container.get<GetPaymentsUseCase>(
 				PAYMENT_TOKENS.GetPaymentsUseCase
 			);
-			const response = await useCase.execute();
+			const response = await useCase.execute({
+				page: pageNum ?? page,
+				pageSize: PAGE_SIZE,
+				status: statusFilter,
+				rango: rango || undefined,
+			});
 			setPayments(response.data);
 			setStats(response.stats);
+			setTotal(response.total);
+			setPage(response.page);
 		} catch (error) {
 			console.error("Error loading payments:", error);
 		} finally {
@@ -151,21 +153,16 @@ export function PaymentsPage() {
 		}
 	};
 
+	// Al cambiar filtros, volver a página 1
 	useEffect(() => {
-		loadPayments();
-	}, []);
+		setPage(1);
+	}, [rango, statusFilter]);
 
-	const handleConfirm = async (id: string) => {
-		// In real implementation, call confirm use case
-		console.log("Confirming payment:", id);
-		await loadPayments();
-	};
+	useEffect(() => {
+		loadPayments(page);
+	}, [page, rango, statusFilter]);
 
-	const handleRetry = async (id: string) => {
-		// In real implementation, call retry use case
-		console.log("Retrying payment:", id);
-		await loadPayments();
-	};
+
 
 	return (
 		<div className="p-6">
@@ -175,6 +172,35 @@ export function PaymentsPage() {
 				<p className="text-muted-foreground mt-1">
 					{t("payments.description")}
 				</p>
+			</div>
+
+			{/* Filtros: rango y estado */}
+			<div className="flex flex-wrap gap-3 mb-4">
+				<div className="flex items-center gap-2">
+					<label className="text-sm text-muted-foreground">Rango:</label>
+					<select
+						className="border rounded-md px-3 py-1.5 text-sm bg-background"
+						value={rango}
+						onChange={(e) => setRango(e.target.value)}
+					>
+						{RANGO_OPTIONS.map((opt) => (
+							<option key={opt.value || "all"} value={opt.value}>{opt.label}</option>
+						))}
+					</select>
+				</div>
+				<div className="flex items-center gap-2">
+					<label className="text-sm text-muted-foreground">Estado:</label>
+					<select
+						className="border rounded-md px-3 py-1.5 text-sm bg-background"
+						value={statusFilter ?? ""}
+						onChange={(e) => setStatusFilter((e.target.value || undefined) as PaymentStatus | undefined)}
+					>
+						<option value="">Todos</option>
+						<option value="exitoso">Exitoso</option>
+						<option value="pendiente">Pendiente</option>
+						<option value="fallido">Fallido</option>
+					</select>
+				</div>
 			</div>
 
 			{/* Stats Cards */}
@@ -211,7 +237,7 @@ export function PaymentsPage() {
 									{t("payments.table.date")}
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-									{t("payments.table.business")}
+									Descripción
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
 									{t("payments.table.amount")}
@@ -220,20 +246,23 @@ export function PaymentsPage() {
 									{t("payments.table.method")}
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-									{t("payments.table.transaction")}
+									Referencia / Transacción
+								</th>
+								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+									Plan
+								</th>
+								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+									Cliente
 								</th>
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
 									{t("payments.table.status")}
-								</th>
-								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-									{t("payments.table.actions")}
 								</th>
 							</tr>
 						</thead>
 						<tbody>
 							{loading ? (
 								<tr>
-									<td colSpan={7} className="p-8 text-center">
+									<td colSpan={9} className="p-8 text-center">
 										<Icon
 											icon="lucide:loader-2"
 											className="animate-spin mx-auto"
@@ -244,7 +273,7 @@ export function PaymentsPage() {
 							) : payments.length === 0 ? (
 								<tr>
 									<td
-										colSpan={7}
+										colSpan={9}
 										className="p-8 text-center text-muted-foreground"
 									>
 										{t("payments.noPayments")}
@@ -256,30 +285,29 @@ export function PaymentsPage() {
 										key={payment.id}
 										className="border-b last:border-b-0 hover:bg-muted/20"
 									>
-										<td className="p-4 text-sm">
+										<td className="p-4 text-sm whitespace-nowrap">
 											{formatDate(payment.fecha)}
 										</td>
-										<td className="p-4 text-sm font-medium">
-											{payment.negocioNombre}
+										<td className="p-4 text-sm text-muted-foreground max-w-[200px] truncate" title={payment.descripcion}>
+											{payment.descripcion || "—"}
 										</td>
-										<td className="p-4 text-sm font-semibold">
+										<td className="p-4 text-sm font-semibold whitespace-nowrap">
 											{formatCurrency(payment.monto)}
 										</td>
 										<td className="p-4 text-sm">
 											{getMethodLabel(payment.metodo)}
 										</td>
 										<td className="p-4 text-sm text-muted-foreground">
-											{payment.transaccionId}
+											{payment.referencia || payment.transaccionId || "—"}
+										</td>
+										<td className="p-4 text-sm">
+											{payment.planName || "—"}
+										</td>
+										<td className="p-4 text-sm">
+											{payment.clienteNombre || payment.clienteEmail || "—"}
 										</td>
 										<td className="p-4">
 											<StatusBadge status={payment.estado} />
-										</td>
-										<td className="p-4">
-											<PaymentActions
-												payment={payment}
-												onConfirm={handleConfirm}
-												onRetry={handleRetry}
-											/>
 										</td>
 									</tr>
 								))
@@ -287,6 +315,32 @@ export function PaymentsPage() {
 						</tbody>
 					</table>
 				</div>
+				{/* Paginación */}
+				{total > 0 && (
+					<div className="flex items-center justify-between border-t px-4 py-3 text-sm text-muted-foreground">
+						<span>
+							{((page - 1) * PAGE_SIZE) + 1}-{Math.min(page * PAGE_SIZE, total)} de {total}
+						</span>
+						<div className="flex gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={page <= 1 || loading}
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
+							>
+								Anterior
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={page * PAGE_SIZE >= total || loading}
+								onClick={() => setPage((p) => p + 1)}
+							>
+								Siguiente
+							</Button>
+						</div>
+					</div>
+				)}
 			</div>
 		</div>
 	);

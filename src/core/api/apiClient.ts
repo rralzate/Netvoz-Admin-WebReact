@@ -99,6 +99,10 @@ class ApiClient {
 		return this.client.put<T, T>(options.url, options.data, options.config);
 	}
 
+	public async patch<T = any>(options: RequestOptions): Promise<T> {
+		return this.client.patch<T, T>(options.url, options.data, options.config);
+	}
+
 	public async delete<T = any>(options: RequestOptions): Promise<T> {
 		return this.client.delete<T, T>(options.url, options.config);
 	}
