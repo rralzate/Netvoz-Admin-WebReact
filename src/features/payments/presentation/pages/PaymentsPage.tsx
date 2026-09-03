@@ -230,7 +230,7 @@ export function PaymentsPage() {
 			{/* Payments Table */}
 			<div className="bg-card rounded-lg border overflow-hidden">
 				<div className="overflow-x-auto">
-					<table className="w-full">
+					<table className="w-full min-w-[900px]">
 						<thead>
 							<tr className="border-b bg-muted/30">
 								<th className="text-left p-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -317,26 +317,49 @@ export function PaymentsPage() {
 				</div>
 				{/* Paginación */}
 				{total > 0 && (
-					<div className="flex items-center justify-between border-t px-4 py-3 text-sm text-muted-foreground">
-						<span>
-							{((page - 1) * PAGE_SIZE) + 1}-{Math.min(page * PAGE_SIZE, total)} de {total}
+					<div className="flex items-center justify-between border-t px-4 py-3">
+						<span className="text-sm text-muted-foreground">
+							Mostrando {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} de {total}
 						</span>
-						<div className="flex gap-2">
+						<div className="flex items-center gap-1">
 							<Button
 								variant="outline"
 								size="sm"
 								disabled={page <= 1 || loading}
 								onClick={() => setPage((p) => Math.max(1, p - 1))}
 							>
-								Anterior
+								<Icon icon="lucide:chevron-left" size={16} />
 							</Button>
+							{Array.from({ length: Math.ceil(total / PAGE_SIZE) }, (_, i) => i + 1)
+								.filter((p) => p === 1 || p === Math.ceil(total / PAGE_SIZE) || Math.abs(p - page) <= 1)
+								.reduce<(number | "...")[]>((acc, p, idx, arr) => {
+									if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+									acc.push(p);
+									return acc;
+								}, [])
+								.map((item, idx) =>
+									item === "..." ? (
+										<span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground text-sm">…</span>
+									) : (
+										<Button
+											key={item}
+											variant={page === item ? "default" : "outline"}
+											size="sm"
+											className="w-8 h-8 p-0"
+											disabled={loading}
+											onClick={() => setPage(item as number)}
+										>
+											{item}
+										</Button>
+									)
+								)}
 							<Button
 								variant="outline"
 								size="sm"
 								disabled={page * PAGE_SIZE >= total || loading}
 								onClick={() => setPage((p) => p + 1)}
 							>
-								Siguiente
+								<Icon icon="lucide:chevron-right" size={16} />
 							</Button>
 						</div>
 					</div>

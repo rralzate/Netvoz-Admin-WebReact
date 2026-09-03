@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { Icon } from "@/components/icon";
@@ -11,6 +11,8 @@ import type {
 	SubscriptionMoneda,
 } from "../../../domain/entities/SubscriptionEntity";
 import { useSubscriptions } from "../../hooks/useSubscriptions";
+
+const PAGE_SIZE = 20;
 
 type FilterTab = "todos" | SubscriptionEstado;
 
@@ -60,6 +62,7 @@ export function SubscriptionsPage() {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [activeFilter, setActiveFilter] = useState<FilterTab>("todos");
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const {
 		filteredSubscriptions,
@@ -70,6 +73,17 @@ export function SubscriptionsPage() {
 		setFilterEstado,
 		loadSubscriptions,
 	} = useSubscriptions();
+
+	const totalPages = Math.max(1, Math.ceil(filteredSubscriptions.length / PAGE_SIZE));
+	const paginatedSubscriptions = filteredSubscriptions.slice(
+		(currentPage - 1) * PAGE_SIZE,
+		currentPage * PAGE_SIZE,
+	);
+
+	// Reset to page 1 when filter/search changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [filteredSubscriptions.length]);
 
 	// Handle filter change
 	const handleFilterChange = (filter: FilterTab) => {
@@ -151,7 +165,8 @@ export function SubscriptionsPage() {
 
 			{/* Table */}
 			<div className="bg-card rounded-lg border shadow-sm overflow-hidden">
-				<table className="w-full">
+				<div className="overflow-x-auto">
+				<table className="w-full min-w-[800px]">
 					<thead>
 						<tr className="border-b bg-muted/50">
 							<th className="text-left p-4 font-medium text-muted-foreground text-sm">NEGOCIO</th>
@@ -164,7 +179,7 @@ export function SubscriptionsPage() {
 						</tr>
 					</thead>
 					<tbody>
-						{filteredSubscriptions.map((subscription) => (
+						{paginatedSubscriptions.map((subscription) => (
 							<tr
 								key={subscription.id}
 								className="border-b last:border-b-0 hover:bg-muted/30 transition-colors"
@@ -229,6 +244,56 @@ export function SubscriptionsPage() {
 						)}
 					</tbody>
 				</table>
+				</div>
+
+				{/* Pagination */}
+				{totalPages > 1 && (
+					<div className="flex items-center justify-between px-4 py-3 border-t">
+						<span className="text-sm text-muted-foreground">
+							Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredSubscriptions.length)} de {filteredSubscriptions.length}
+						</span>
+						<div className="flex items-center gap-1">
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={currentPage === 1}
+								onClick={() => setCurrentPage((p) => p - 1)}
+							>
+								<Icon icon="lucide:chevron-left" size={16} />
+							</Button>
+							{Array.from({ length: totalPages }, (_, i) => i + 1)
+								.filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+								.reduce<(number | "...")[]>((acc, p, idx, arr) => {
+									if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+									acc.push(p);
+									return acc;
+								}, [])
+								.map((item, idx) =>
+									item === "..." ? (
+										<span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground text-sm">…</span>
+									) : (
+										<Button
+											key={item}
+											variant={currentPage === item ? "default" : "outline"}
+											size="sm"
+											className="w-8 h-8 p-0"
+											onClick={() => setCurrentPage(item as number)}
+										>
+											{item}
+										</Button>
+									)
+								)}
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={currentPage === totalPages}
+								onClick={() => setCurrentPage((p) => p + 1)}
+							>
+								<Icon icon="lucide:chevron-right" size={16} />
+							</Button>
+						</div>
+					</div>
+				)}
 			</div>
 
 			{/* Loading overlay */}
