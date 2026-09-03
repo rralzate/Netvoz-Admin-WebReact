@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Icon } from "@/components/icon";
 import { Button } from "@/core/ui/button";
@@ -7,6 +7,8 @@ import { cn } from "@/core/utils";
 import type { RecommendationEstado } from "../../domain/entities/RecommendationEntity";
 import { useRecommendations } from "../hooks/useRecommendations";
 import { ModalUpdateRecommendationStatus } from "../components/ModalUpdateRecommendationStatus";
+
+const PAGE_SIZE = 20;
 
 const estadoOptions: { key: RecommendationEstado | null; label: string }[] = [
 	{ key: null, label: "Todos" },
@@ -44,6 +46,7 @@ export function RecommendationsPage() {
 	const { t } = useTranslation();
 	const [selectedRecommendation, setSelectedRecommendation] = useState<any>(null);
 	const [modalOpen, setModalOpen] = useState(false);
+	const [currentPage, setCurrentPage] = useState(1);
 
 	const {
 		recommendations,
@@ -54,6 +57,16 @@ export function RecommendationsPage() {
 		loadRecommendations,
 		updateStatus,
 	} = useRecommendations({ adminMode: true });
+
+	const totalPages = Math.max(1, Math.ceil(recommendations.length / PAGE_SIZE));
+	const paginatedRecommendations = recommendations.slice(
+		(currentPage - 1) * PAGE_SIZE,
+		currentPage * PAGE_SIZE,
+	);
+
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [recommendations.length, filterEstado]);
 
 	const handleUpdateStatus = async (
 		id: string,
@@ -117,7 +130,7 @@ export function RecommendationsPage() {
 
 			<div className="bg-card rounded-lg border overflow-hidden">
 				<div className="overflow-x-auto">
-					<table className="w-full">
+					<table className="w-full min-w-[800px]">
 						<thead>
 							<tr className="border-b bg-muted/50">
 								<th className="text-left p-3 font-medium text-muted-foreground text-sm">INVITADO</th>
@@ -130,7 +143,7 @@ export function RecommendationsPage() {
 							</tr>
 						</thead>
 						<tbody>
-							{recommendations.map((rec) => (
+							{paginatedRecommendations.map((rec) => (
 								<tr key={rec.id} className="border-b last:border-b-0">
 									<td className="p-3">
 										<span className="font-medium">
@@ -197,6 +210,55 @@ export function RecommendationsPage() {
 					<div className="text-center py-12 text-muted-foreground">
 						<Icon icon="lucide:users-round" className="mx-auto mb-2 h-10 w-10 opacity-50" />
 						<p>{t("recommendations.empty", "No hay recomendaciones con este filtro.")}</p>
+					</div>
+				)}
+
+				{/* Pagination */}
+				{totalPages > 1 && (
+					<div className="flex items-center justify-between px-4 py-3 border-t">
+						<span className="text-sm text-muted-foreground">
+							Mostrando {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, recommendations.length)} de {recommendations.length}
+						</span>
+						<div className="flex items-center gap-1">
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={currentPage === 1}
+								onClick={() => setCurrentPage((p) => p - 1)}
+							>
+								<Icon icon="lucide:chevron-left" size={16} />
+							</Button>
+							{Array.from({ length: totalPages }, (_, i) => i + 1)
+								.filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+								.reduce<(number | "...")[]>((acc, p, idx, arr) => {
+									if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push("...");
+									acc.push(p);
+									return acc;
+								}, [])
+								.map((item, idx) =>
+									item === "..." ? (
+										<span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground text-sm">…</span>
+									) : (
+										<Button
+											key={item}
+											variant={currentPage === item ? "default" : "outline"}
+											size="sm"
+											className="w-8 h-8 p-0"
+											onClick={() => setCurrentPage(item as number)}
+										>
+											{item}
+										</Button>
+									)
+								)}
+							<Button
+								variant="outline"
+								size="sm"
+								disabled={currentPage === totalPages}
+								onClick={() => setCurrentPage((p) => p + 1)}
+							>
+								<Icon icon="lucide:chevron-right" size={16} />
+							</Button>
+						</div>
 					</div>
 				)}
 			</div>
