@@ -1,4 +1,19 @@
 {
+  "routes": [
+    {
+      "route": "/assets/*"
+    },
+    {
+      "route": "/*.js"
+    },
+    {
+      "route": "/*.css"
+    },
+    {
+      "route": "/*",
+      "rewrite": "/index.html"
+    }
+  ],
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": ["/assets/*", "/*.js", "/*.css"]
