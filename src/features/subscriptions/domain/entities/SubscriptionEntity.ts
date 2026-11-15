@@ -179,11 +179,17 @@ export interface SubscriptionTransactionListResponse {
 // Helpers para la entidad (funciones de utilidad)
 export const SubscriptionHelpers = {
 	estaActiva(subscription: SubscriptionEntity): boolean {
-		return subscription.estado === "activa" && new Date(subscription.fechaVencimiento) > new Date();
+		const vence = new Date(subscription.fechaVencimiento);
+		const bogotaDateStr = vence.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+		const endOfDayBogota = new Date(`${bogotaDateStr}T23:59:59.999-05:00`);
+		return subscription.estado === "activa" && endOfDayBogota > new Date();
 	},
 
 	estaVencida(subscription: SubscriptionEntity): boolean {
-		return new Date(subscription.fechaVencimiento) <= new Date();
+		const vence = new Date(subscription.fechaVencimiento);
+		const bogotaDateStr = vence.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+		const endOfDayBogota = new Date(`${bogotaDateStr}T23:59:59.999-05:00`);
+		return endOfDayBogota <= new Date();
 	},
 
 	puedeRenovarse(subscription: SubscriptionEntity): boolean {
@@ -200,8 +206,10 @@ export const SubscriptionHelpers = {
 
 	diasRestantes(subscription: SubscriptionEntity): number {
 		const hoy = new Date();
-		const vencimiento = new Date(subscription.fechaVencimiento);
-		const diferencia = vencimiento.getTime() - hoy.getTime();
+		const vence = new Date(subscription.fechaVencimiento);
+		const bogotaDateStr = vence.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+		const endOfDayBogota = new Date(`${bogotaDateStr}T23:59:59.999-05:00`);
+		const diferencia = endOfDayBogota.getTime() - hoy.getTime();
 		return Math.ceil(diferencia / (1000 * 60 * 60 * 24));
 	},
 
