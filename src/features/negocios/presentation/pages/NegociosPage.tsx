@@ -22,6 +22,7 @@ interface BusinessEntity {
 	nit?: string;
 	active: boolean;
 	createdAt?: string;
+	subscriptionEndDate?: string | null;
 }
 
 interface GetAllBusinessesResponse {
@@ -49,7 +50,7 @@ async function purgeNegocio(id: string): Promise<PurgeResult> {
 	return (response as any)?.data ?? response;
 }
 
-function formatDate(dateString?: string): string {
+function formatDate(dateString?: string | null): string {
 	if (!dateString) return "—";
 	try {
 		return new Date(dateString).toLocaleDateString("es-CO", {
@@ -60,6 +61,11 @@ function formatDate(dateString?: string): string {
 	} catch {
 		return dateString;
 	}
+}
+
+function isExpired(dateString?: string | null): boolean {
+	if (!dateString) return false;
+	return new Date(dateString) < new Date();
 }
 
 export function NegociosPage() {
@@ -190,6 +196,7 @@ export function NegociosPage() {
 								<th className="text-left p-4 font-medium text-muted-foreground text-sm">NEGOCIO</th>
 								<th className="text-left p-4 font-medium text-muted-foreground text-sm">NIT</th>
 								<th className="text-left p-4 font-medium text-muted-foreground text-sm">ESTADO</th>
+								<th className="text-left p-4 font-medium text-muted-foreground text-sm">FIN SUSCRIPCIÓN</th>
 								<th className="text-left p-4 font-medium text-muted-foreground text-sm">CREADO</th>
 								<th className="text-left p-4 font-medium text-muted-foreground text-sm">ACCIONES</th>
 							</tr>
@@ -222,12 +229,29 @@ export function NegociosPage() {
 											{negocio.active ? "Activo" : "Inactivo"}
 										</Badge>
 									</td>
+									<td className="p-4">
+										{negocio.subscriptionEndDate ? (
+											<div className="flex flex-col gap-1">
+												<span className="text-sm">{formatDate(negocio.subscriptionEndDate)}</span>
+												{isExpired(negocio.subscriptionEndDate) && (
+													<Badge
+														variant="outline"
+														className="w-fit text-xs bg-red-100 text-red-700 border-red-200"
+													>
+														Vencida
+													</Badge>
+												)}
+											</div>
+										) : (
+											<span className="text-sm text-muted-foreground">—</span>
+										)}
+									</td>
 									<td className="p-4 text-sm text-muted-foreground">
 										{formatDate(negocio.createdAt)}
 									</td>
 									<td className="p-4">
 										<Button
-											variant="destructive"
+											variant="default"
 											size="sm"
 											onClick={() => handlePurgeClick(negocio)}
 										>
@@ -239,7 +263,7 @@ export function NegociosPage() {
 							))}
 							{filtered.length === 0 && (
 								<tr>
-									<td colSpan={5} className="p-8 text-center text-muted-foreground">
+									<td colSpan={6} className="p-8 text-center text-muted-foreground">
 										{searchTerm
 											? "No se encontraron negocios con ese criterio"
 											: "No hay negocios registrados"}
