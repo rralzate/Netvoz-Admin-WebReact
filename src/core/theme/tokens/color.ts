@@ -5,7 +5,7 @@ export const presetsColors = {
 	[ThemeColorPresets.Default]: {
 		lighter: "#F5E6F0",
 		light: "#D9B3CC",
-		default: "#A20067",
+		default: "#9E1460",
 		dark: "#7A004D",
 		darker: "#520033",
 	},
